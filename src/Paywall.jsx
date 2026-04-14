@@ -10,7 +10,7 @@ export default function Paywall({ session }) {
   const checkout = async (priceId) => {
     setLoading(priceId);
     try {
-      const res = await fetch('/api/create-checkout-session', {
+      const res = await fetch('/api/create-checkout-session.cjs', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({

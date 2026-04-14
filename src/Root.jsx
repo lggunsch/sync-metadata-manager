@@ -30,7 +30,7 @@ export default function Root() {
     if (paymentStatus === 'success') {
       const sessionId = params.get('session_id');
       if (sessionId) {
-        await fetch('/api/verify-payment', {
+        await fetch('/api/verify-payment.cjs', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ sessionId }),

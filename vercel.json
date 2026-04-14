@@ -1,10 +1,6 @@
 {
   "functions": {
-    "api/create-checkout-session.js": {
-      "runtime": "nodejs20.x"
-    },
-    "api/verify-payment.js": {
-      "runtime": "nodejs20.x"
-    }
+    "api/create-checkout-session.js": {},
+    "api/verify-payment.js": {}
   }
 }

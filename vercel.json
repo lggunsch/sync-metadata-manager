@@ -1,6 +1,0 @@
-{
-  "functions": {
-    "api/create-checkout-session.js": {},
-    "api/verify-payment.js": {}
-  }
-}

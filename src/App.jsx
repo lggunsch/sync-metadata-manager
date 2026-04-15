@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect, useRef, useCallback } from "react";
 import { supabase } from "./supabase";
 import InstallBanner from "./InstallBanner";
 
@@ -29,6 +29,8 @@ const STATUS_COLORS = {
   'No Response': 'bg-gray-800 text-gray-500',
 };
 
+const inp = "bg-gray-800 border border-gray-700 rounded-lg px-3 py-2 text-sm text-gray-100 placeholder-gray-600 focus:outline-none focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 w-full";
+
 const newTrackData = () => ({
   title:'', artist:'', featuring:'', albumArtist:'', trackNum:'', duration:'',
   isrc:'', isni:'', ipi:'', iswc:'', upc:'', pro:'', label:'', publisher:'', masterOwner:'',
@@ -51,9 +53,7 @@ const FIELD_MAP = {
   'title':'title','track title':'title','song title':'title','song':'title',
   'artist':'artist','artist name':'artist',
   'featuring':'featuring','feat':'featuring','feature':'featuring',
-  'bpm':'bpm','tempo':'bpm',
-  'key':'key','musical key':'key',
-  'genre':'genre',
+  'bpm':'bpm','tempo':'bpm','key':'key','musical key':'key','genre':'genre',
   'subgenre':'subGenre','sub genre':'subGenre','sub-genre':'subGenre',
   'isrc':'isrc','isni':'isni','ipi':'ipi','iswc':'iswc',
   'upc':'upc','upc/ean':'upc','ean':'upc',
@@ -188,8 +188,6 @@ function PrintPreview({ tracks, projectName, onBack }) {
   );
 }
 
-const inp = "bg-gray-800 border border-gray-700 rounded-lg px-3 py-2 text-sm text-gray-100 placeholder-gray-600 focus:outline-none focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 w-full";
-
 function Inp({ label, value, onChange, placeholder='', type='text', cls='' }) {
   return (
     <div className={`flex flex-col gap-1 ${cls}`}>
@@ -234,62 +232,168 @@ function Tags({ label, options, selected, onToggle }) {
   );
 }
 
+// ── OwnerRows must be outside App to prevent focus loss on re-render ──────────
+function OwnerRows({ field, roles, trackData, updOwner, addOwner, rmOwner }) {
+  return (
+    <div className="flex flex-col gap-3">
+      {trackData[field].map((o,i) => (
+        <div key={i} className="flex flex-col gap-2 bg-gray-800/50 rounded-lg p-3">
+          <input value={o.name} onChange={e=>updOwner(field,i,'name',e.target.value)} placeholder="Full Name" className={inp} />
+          <div className="flex gap-2">
+            <select value={o.role} onChange={e=>updOwner(field,i,'role',e.target.value)} className={`${inp} flex-1`}>
+              <option value="">Role</option>{roles.map(r=><option key={r}>{r}</option>)}
+            </select>
+            <div className="flex items-center gap-1 w-24">
+              <input value={o.pct} onChange={e=>updOwner(field,i,'pct',e.target.value)} placeholder="%" className={`${inp} text-center`} />
+            </div>
+            {trackData[field].length>1 && <button onClick={()=>rmOwner(field,i)} className="text-gray-600 hover:text-red-400 text-xl px-1">×</button>}
+          </div>
+        </div>
+      ))}
+      <button onClick={() => addOwner(field)} className="text-xs text-indigo-400 hover:text-indigo-300 text-left w-fit">+ Add owner</button>
+    </div>
+  );
+}
+
+// ── TrackForm must be outside App to prevent focus loss on re-render ──────────
+function TrackForm({ trackData, sec, sf, tog, updOwner, addOwner, rmOwner, pct, saveTrack, setSec }) {
+  return (
+    <div className="bg-gray-900 border border-gray-800 rounded-xl p-4 mb-4">
+      <h3 className="text-sm font-semibold text-gray-200 mb-4">{SECTIONS[sec]}</h3>
+      {sec === 0 && <div className="flex flex-col gap-3">
+        <Inp label="Track Title *" value={trackData.title} onChange={v=>sf('title',v)} />
+        <Inp label="Artist" value={trackData.artist} onChange={v=>sf('artist',v)} />
+        <Inp label="Featuring" value={trackData.featuring} onChange={v=>sf('featuring',v)} placeholder="ft. Artist Name" />
+        <Inp label="Album Artist" value={trackData.albumArtist} onChange={v=>sf('albumArtist',v)} />
+        <div className="grid grid-cols-2 gap-3">
+          <Inp label="Track Number" value={trackData.trackNum} onChange={v=>sf('trackNum',v)} placeholder="e.g. 3" />
+          <Inp label="Duration" value={trackData.duration} onChange={v=>sf('duration',v)} placeholder="e.g. 3:42" />
+        </div>
+      </div>}
+      {sec === 1 && <div className="flex flex-col gap-3">
+        <Inp label="ISRC" value={trackData.isrc} onChange={v=>sf('isrc',v)} placeholder="e.g. USRC12345678" />
+        <Inp label="ISNI" value={trackData.isni} onChange={v=>sf('isni',v)} />
+        <Inp label="IPI" value={trackData.ipi} onChange={v=>sf('ipi',v)} />
+        <Inp label="ISWC" value={trackData.iswc} onChange={v=>sf('iswc',v)} />
+        <Inp label="UPC/EAN" value={trackData.upc} onChange={v=>sf('upc',v)} />
+        <Sel label="PRO" value={trackData.pro} onChange={v=>sf('pro',v)} options={PROS} />
+        <Inp label="Publisher" value={trackData.publisher} onChange={v=>sf('publisher',v)} />
+        <Inp label="Label" value={trackData.label} onChange={v=>sf('label',v)} />
+        <Inp label="Master Owner" value={trackData.masterOwner} onChange={v=>sf('masterOwner',v)} />
+        <div className="grid grid-cols-2 gap-3">
+          <Inp label="Copyright Year" value={trackData.copyrightYear} onChange={v=>sf('copyrightYear',v)} placeholder="e.g. 2024" />
+          <Inp label="Release Date" value={trackData.releaseDate} onChange={v=>sf('releaseDate',v)} type="date" />
+          <Sel label="File Format" value={trackData.fileFormat} onChange={v=>sf('fileFormat',v)} options={FORMATS} />
+          <Sel label="Sample Rate" value={trackData.sampleRate} onChange={v=>sf('sampleRate',v)} options={SAMPLE_RATES} />
+        </div>
+        <Sel label="Bit Depth" value={trackData.bitDepth} onChange={v=>sf('bitDepth',v)} options={BIT_DEPTHS} />
+      </div>}
+      {sec === 2 && <div className="flex flex-col gap-3">
+        <div className="grid grid-cols-2 gap-3">
+          <Inp label="BPM" value={trackData.bpm} onChange={v=>sf('bpm',v)} placeholder="e.g. 120" />
+          <Sel label="Key" value={trackData.key} onChange={v=>sf('key',v)} options={KEYS} />
+        </div>
+        <Sel label="Time Signature" value={trackData.timeSig} onChange={v=>sf('timeSig',v)} options={TIME_SIGS} />
+        <Inp label="Genre" value={trackData.genre} onChange={v=>sf('genre',v)} placeholder="e.g. Hip-Hop" />
+        <Inp label="Sub-Genre" value={trackData.subGenre} onChange={v=>sf('subGenre',v)} placeholder="e.g. Trap" />
+        <Sel label="Tempo Feel" value={trackData.tempoFeel} onChange={v=>sf('tempoFeel',v)} options={TEMPO_FEELS} />
+        <Sel label="Vocals" value={trackData.hasVocals} onChange={v=>sf('hasVocals',v)} options={['Yes','No','Instrumental Version Available']} />
+        {trackData.hasVocals==='Yes' && <>
+          <Sel label="Vocal Type" value={trackData.vocalType} onChange={v=>sf('vocalType',v)} options={VOCAL_TYPES} />
+          <Sel label="Language" value={trackData.language} onChange={v=>sf('language',v)} options={LANGUAGES} />
+        </>}
+        <div className="flex items-center gap-3">
+          <input type="checkbox" checked={trackData.explicit} onChange={e=>sf('explicit',e.target.checked)} className="w-5 h-5 accent-indigo-500 cursor-pointer" id="exp" />
+          <label htmlFor="exp" className="text-sm text-gray-300 cursor-pointer">Explicit Content</label>
+        </div>
+      </div>}
+      {sec === 3 && <div className="flex flex-col gap-5">
+        <Tags label="Moods" options={MOODS} selected={trackData.moods} onToggle={v=>tog('moods',v)} />
+        <Tags label="Instruments" options={INSTRUMENTS} selected={trackData.instruments} onToggle={v=>tog('instruments',v)} />
+        <div className="flex flex-col gap-1">
+          <label className="text-xs text-gray-400 font-medium">Themes / Keywords</label>
+          <input value={trackData.themes} onChange={e=>sf('themes',e.target.value)} placeholder="e.g. loss, redemption, summer" className={inp} />
+        </div>
+        <div className="flex flex-col gap-4 bg-gray-800/50 rounded-xl p-4 border border-gray-700">
+          <p className="text-xs text-gray-500 font-semibold uppercase tracking-wider">Audio Features</p>
+          <Slider label="Energy" value={trackData.energy} onChange={v=>sf('energy',v)} />
+          <Slider label="Danceability" value={trackData.danceability} onChange={v=>sf('danceability',v)} />
+          <Slider label="Acousticness" value={trackData.acousticness} onChange={v=>sf('acousticness',v)} />
+          <Slider label="Instrumentalness" value={trackData.instrumentalness} onChange={v=>sf('instrumentalness',v)} />
+          <Slider label="Valence (Positivity)" value={trackData.valence} onChange={v=>sf('valence',v)} />
+        </div>
+      </div>}
+      {sec === 4 && <div className="flex flex-col gap-5">
+        <div>
+          <label className="text-xs text-gray-400 font-medium block mb-3">AI Assisted</label>
+          <div className="flex gap-2">
+            {['No','Partially','Yes'].map(opt => (
+              <button key={opt} onClick={()=>sf('aiAssisted',opt)}
+                className={`py-3 rounded-lg text-sm font-semibold border transition-colors flex-1 ${trackData.aiAssisted===opt?opt==='No'?'bg-green-600 border-green-500 text-white':opt==='Yes'?'bg-red-600 border-red-500 text-white':'bg-yellow-500 border-yellow-400 text-gray-900':'bg-gray-800 border-gray-700 text-gray-400'}`}>{opt}</button>
+            ))}
+          </div>
+        </div>
+        {trackData.aiAssisted!=='No' && <div className="flex flex-col gap-1"><label className="text-xs text-gray-400 font-medium">What was AI-assisted?</label><textarea value={trackData.aiNotes} onChange={e=>sf('aiNotes',e.target.value)} rows={3} className={`${inp} resize-none`} /></div>}
+        {trackData.aiAssisted==='No' && <div className="bg-green-900/20 border border-green-800 rounded-xl p-4 text-sm text-green-400">✓ 100% human-created content</div>}
+      </div>}
+      {sec === 5 && <div className="flex flex-col gap-6">
+        <div>
+          <div className="flex items-center justify-between mb-3">
+            <h4 className="text-sm font-semibold text-gray-200">Master Recording</h4>
+            <span className={`text-xs font-semibold px-2 py-0.5 rounded-full ${pct(trackData.masterOwners)===100?'bg-green-900/50 text-green-400':'bg-gray-800 text-gray-500'}`}>{pct(trackData.masterOwners)}%</span>
+          </div>
+          <OwnerRows field="masterOwners" roles={WRITER_ROLES} trackData={trackData} updOwner={updOwner} addOwner={addOwner} rmOwner={rmOwner} />
+        </div>
+        <div className="border-t border-gray-800" />
+        <div>
+          <div className="flex items-center justify-between mb-3">
+            <h4 className="text-sm font-semibold text-gray-200">Publishing</h4>
+            <span className={`text-xs font-semibold px-2 py-0.5 rounded-full ${pct(trackData.pubOwners)===100?'bg-green-900/50 text-green-400':'bg-gray-800 text-gray-500'}`}>{pct(trackData.pubOwners)}%</span>
+          </div>
+          <OwnerRows field="pubOwners" roles={PUB_ROLES} trackData={trackData} updOwner={updOwner} addOwner={addOwner} rmOwner={rmOwner} />
+        </div>
+      </div>}
+      {sec === 6 && <div className="flex flex-col gap-4">
+        <Inp label="Contact Name" value={trackData.contactName} onChange={v=>sf('contactName',v)} />
+        <Inp label="Email" value={trackData.contactEmail} onChange={v=>sf('contactEmail',v)} type="email" />
+        <Inp label="Phone" value={trackData.contactPhone} onChange={v=>sf('contactPhone',v)} />
+        <div className="flex flex-col gap-1">
+          <label className="text-xs text-gray-400 font-medium">Additional Comments</label>
+          <textarea value={trackData.comments} onChange={e=>sf('comments',e.target.value)} rows={5} className={`${inp} resize-none`} />
+        </div>
+      </div>}
+    </div>
+  );
+}
+
 function ImportModal({ projects, session, onClose, onImported }) {
   const [mode, setMode] = useState('single');
   const [targetProjId, setTargetProjId] = useState('');
   const [rows, setRows] = useState([]);
   const [headers, setHeaders] = useState([]);
   const [mapping, setMapping] = useState({});
-  const [step, setStep] = useState('upload'); // 'upload' | 'map' | 'preview'
+  const [step, setStep] = useState('upload');
   const [importing, setImporting] = useState(false);
   const fileRef = useRef();
 
   const FSM_FIELDS = [
-    { value: '', label: '— Skip this column —' },
-    { value: 'title', label: 'Track Title' },
-    { value: 'artist', label: 'Artist' },
-    { value: 'featuring', label: 'Featuring' },
-    { value: 'albumArtist', label: 'Album Artist' },
-    { value: 'trackNum', label: 'Track Number' },
-    { value: 'duration', label: 'Duration' },
-    { value: 'isrc', label: 'ISRC' },
-    { value: 'isni', label: 'ISNI' },
-    { value: 'ipi', label: 'IPI' },
-    { value: 'iswc', label: 'ISWC' },
-    { value: 'upc', label: 'UPC/EAN' },
-    { value: 'pro', label: 'PRO' },
-    { value: 'publisher', label: 'Publisher' },
-    { value: 'label', label: 'Label' },
-    { value: 'masterOwner', label: 'Master Owner' },
-    { value: 'copyrightYear', label: 'Copyright Year' },
-    { value: 'releaseDate', label: 'Release Date' },
-    { value: 'fileFormat', label: 'File Format' },
-    { value: 'sampleRate', label: 'Sample Rate' },
-    { value: 'bitDepth', label: 'Bit Depth' },
-    { value: 'bpm', label: 'BPM' },
-    { value: 'key', label: 'Key' },
-    { value: 'timeSig', label: 'Time Signature' },
-    { value: 'genre', label: 'Genre' },
-    { value: 'subGenre', label: 'Sub-Genre' },
-    { value: 'tempoFeel', label: 'Tempo Feel' },
-    { value: 'hasVocals', label: 'Has Vocals' },
-    { value: 'vocalType', label: 'Vocal Type' },
-    { value: 'language', label: 'Language' },
-    { value: 'explicit', label: 'Explicit' },
-    { value: 'themes', label: 'Themes / Keywords' },
-    { value: 'moods', label: 'Moods' },
-    { value: 'instruments', label: 'Instruments' },
-    { value: 'energy', label: 'Energy' },
-    { value: 'danceability', label: 'Danceability' },
-    { value: 'acousticness', label: 'Acousticness' },
-    { value: 'instrumentalness', label: 'Instrumentalness' },
-    { value: 'valence', label: 'Valence' },
-    { value: 'aiAssisted', label: 'AI Assisted' },
-    { value: 'aiNotes', label: 'AI Notes' },
-    { value: 'contactName', label: 'Contact Name' },
-    { value: 'contactEmail', label: 'Contact Email' },
-    { value: 'contactPhone', label: 'Contact Phone' },
-    { value: 'comments', label: 'Comments / Notes' },
+    {value:'',label:'— Skip this column —'},{value:'title',label:'Track Title'},{value:'artist',label:'Artist'},
+    {value:'featuring',label:'Featuring'},{value:'albumArtist',label:'Album Artist'},{value:'trackNum',label:'Track Number'},
+    {value:'duration',label:'Duration'},{value:'isrc',label:'ISRC'},{value:'isni',label:'ISNI'},
+    {value:'ipi',label:'IPI'},{value:'iswc',label:'ISWC'},{value:'upc',label:'UPC/EAN'},
+    {value:'pro',label:'PRO'},{value:'publisher',label:'Publisher'},{value:'label',label:'Label'},
+    {value:'masterOwner',label:'Master Owner'},{value:'copyrightYear',label:'Copyright Year'},
+    {value:'releaseDate',label:'Release Date'},{value:'fileFormat',label:'File Format'},
+    {value:'sampleRate',label:'Sample Rate'},{value:'bitDepth',label:'Bit Depth'},
+    {value:'bpm',label:'BPM'},{value:'key',label:'Key'},{value:'timeSig',label:'Time Signature'},
+    {value:'genre',label:'Genre'},{value:'subGenre',label:'Sub-Genre'},{value:'tempoFeel',label:'Tempo Feel'},
+    {value:'hasVocals',label:'Has Vocals'},{value:'vocalType',label:'Vocal Type'},{value:'language',label:'Language'},
+    {value:'explicit',label:'Explicit'},{value:'themes',label:'Themes / Keywords'},{value:'moods',label:'Moods'},
+    {value:'instruments',label:'Instruments'},{value:'energy',label:'Energy'},{value:'danceability',label:'Danceability'},
+    {value:'acousticness',label:'Acousticness'},{value:'instrumentalness',label:'Instrumentalness'},
+    {value:'valence',label:'Valence'},{value:'aiAssisted',label:'AI Assisted'},{value:'aiNotes',label:'AI Notes'},
+    {value:'contactName',label:'Contact Name'},{value:'contactEmail',label:'Contact Email'},
+    {value:'contactPhone',label:'Contact Phone'},{value:'comments',label:'Comments / Notes'},
   ];
 
   const parseFile = async (file) => {
@@ -298,72 +402,53 @@ function ImportModal({ projects, session, onClose, onImported }) {
     if (ext === 'csv') {
       const text = await file.text();
       const lines = text.split('\n').filter(l => l.trim());
-      hdrs = lines[0].split(',').map(h => h.trim().replace(/^"|"$/g, ''));
+      hdrs = lines[0].split(',').map(h => h.trim().replace(/^"|"$/g,''));
       data = lines.slice(1).map(line => {
-        const vals = line.split(',').map(v => v.trim().replace(/^"|"$/g, ''));
-        return Object.fromEntries(hdrs.map((h, i) => [h, vals[i] || '']));
+        const vals = line.split(',').map(v => v.trim().replace(/^"|"$/g,''));
+        return Object.fromEntries(hdrs.map((h,i) => [h, vals[i]||'']));
       }).filter(r => Object.values(r).some(v => v));
-    } else if (ext === 'xlsx' || ext === 'xls') {
+    } else if (ext==='xlsx'||ext==='xls') {
       await new Promise((resolve) => {
         const reader = new FileReader();
         reader.onload = async (e) => {
-          const { read, utils } = await import('https://cdn.sheetjs.com/xlsx-0.20.1/package/xlsx.mjs');
-          const wb = read(e.target.result, { type: 'array' });
+          const {read,utils} = await import('https://cdn.sheetjs.com/xlsx-0.20.1/package/xlsx.mjs');
+          const wb = read(e.target.result,{type:'array'});
           const ws = wb.Sheets[wb.SheetNames[0]];
-          data = utils.sheet_to_json(ws, { defval: '' });
-          if (data.length) hdrs = Object.keys(data[0]);
+          data = utils.sheet_to_json(ws,{defval:''});
+          if(data.length) hdrs = Object.keys(data[0]);
           resolve();
         };
         reader.readAsArrayBuffer(file);
       });
     }
     if (!hdrs.length) return;
-
-    // Auto-detect mappings
     const autoMap = {};
-    hdrs.forEach(h => {
-      const detected = FIELD_MAP[h.toLowerCase().trim()];
-      autoMap[h] = detected || '';
-    });
-
-    setHeaders(hdrs);
-    setRows(data);
-    setMapping(autoMap);
-    setStep('map');
+    hdrs.forEach(h => { autoMap[h] = FIELD_MAP[h.toLowerCase().trim()] || ''; });
+    setHeaders(hdrs); setRows(data); setMapping(autoMap); setStep('map');
   };
 
-  const applyMapping = (rows) => {
-    return rows.map(row => {
-      const track = newTrackData();
-      for (const [col, fsField] of Object.entries(mapping)) {
-        if (!fsField) continue;
-        const val = row[col];
-        if (val === undefined || val === null || val === '') continue;
-        if (fsField === 'moods' || fsField === 'instruments') {
-          track[fsField] = String(val).split(',').map(s => s.trim()).filter(Boolean);
-        } else if (fsField === 'explicit') {
-          track[fsField] = String(val).toLowerCase() === 'yes' || val === true || val === 1;
-        } else if (['energy','danceability','acousticness','instrumentalness','valence'].includes(fsField)) {
-          track[fsField] = Math.min(100, Math.max(0, parseFloat(val) || 50));
-        } else {
-          track[fsField] = String(val);
-        }
-      }
-      return track;
-    });
-  };
+  const applyMapping = (rows) => rows.map(row => {
+    const track = newTrackData();
+    for (const [col, fsField] of Object.entries(mapping)) {
+      if (!fsField) continue;
+      const val = row[col];
+      if (val===undefined||val===null||val==='') continue;
+      if (fsField==='moods'||fsField==='instruments') track[fsField] = String(val).split(',').map(s=>s.trim()).filter(Boolean);
+      else if (fsField==='explicit') track[fsField] = String(val).toLowerCase()==='yes'||val===true||val===1;
+      else if (['energy','danceability','acousticness','instrumentalness','valence'].includes(fsField)) track[fsField] = Math.min(100,Math.max(0,parseFloat(val)||50));
+      else track[fsField] = String(val);
+    }
+    return track;
+  });
 
   const doImport = async () => {
     if (!targetProjId) return alert('Please select a project first.');
     setImporting(true);
-    const tracksToImport = mode === 'single' ? [rows[0]] : rows;
-    const mapped = applyMapping(tracksToImport);
+    const mapped = applyMapping(mode==='single'?[rows[0]]:rows);
     for (const trackData of mapped) {
-      await supabase.from('tracks').insert({ project_id: targetProjId, user_id: session.user.id, data: trackData });
+      await supabase.from('tracks').insert({project_id:targetProjId,user_id:session.user.id,data:trackData});
     }
-    setImporting(false);
-    onImported();
-    onClose();
+    setImporting(false); onImported(); onClose();
   };
 
   const mappedCount = Object.values(mapping).filter(Boolean).length;
@@ -374,15 +459,12 @@ function ImportModal({ projects, session, onClose, onImported }) {
         <div className="flex items-center justify-between p-4 border-b border-gray-800">
           <div>
             <h2 className="text-sm font-semibold text-gray-100">Import Tracks from File</h2>
-            {step === 'map' && <p className="text-xs text-gray-500 mt-0.5">Match your columns to FSM fields</p>}
+            {step==='map' && <p className="text-xs text-gray-500 mt-0.5">Match your columns to FSM fields</p>}
           </div>
           <button onClick={onClose} className="text-gray-600 hover:text-gray-300 text-xl">×</button>
         </div>
-
         <div className="p-4 flex flex-col gap-4 overflow-y-auto flex-1">
-
-          {/* Step 1 — Upload */}
-          {step === 'upload' && <>
+          {step==='upload' && <>
             <div className="flex gap-2">
               {['single','bulk'].map(m => (
                 <button key={m} onClick={() => setMode(m)}
@@ -391,10 +473,6 @@ function ImportModal({ projects, session, onClose, onImported }) {
                 </button>
               ))}
             </div>
-            <p className="text-xs text-gray-500">
-              {mode==='single'?'Upload a file with one row of track data.':'Upload a file where each row is a track.'}
-              {' '}Column names will be auto-detected — you can adjust any mappings before importing.
-            </p>
             <Sel label="Import into project" value={targetProjId} onChange={setTargetProjId} options={projects.map(p=>p.name)} placeholder="Select a project..." />
             <div className="border-2 border-dashed border-gray-700 rounded-xl p-6 text-center cursor-pointer hover:border-gray-500 transition-colors"
               onClick={() => fileRef.current.click()}>
@@ -402,17 +480,14 @@ function ImportModal({ projects, session, onClose, onImported }) {
               <p className="text-sm text-gray-400">Tap to upload CSV or Excel</p>
               <p className="text-xs text-gray-600 mt-1">.csv, .xlsx, .xls</p>
               <input ref={fileRef} type="file" accept=".csv,.xlsx,.xls" className="hidden"
-                onChange={e => { if(e.target.files[0]) parseFile(e.target.files[0]); }} />
+                onChange={e => {if(e.target.files[0])parseFile(e.target.files[0]);}} />
             </div>
           </>}
-
-          {/* Step 2 — Column Mapper */}
-          {step === 'map' && <>
+          {step==='map' && <>
             <div className="bg-gray-800/50 border border-gray-700 rounded-xl p-3 flex items-center justify-between">
-              <p className="text-xs text-gray-400">{rows.length} row{rows.length!==1?'s':''} · {headers.length} columns detected</p>
+              <p className="text-xs text-gray-400">{rows.length} row{rows.length!==1?'s':''} · {headers.length} columns</p>
               <span className="text-xs text-indigo-400 font-medium">{mappedCount} mapped</span>
             </div>
-
             <div className="flex flex-col gap-2">
               {headers.map(h => (
                 <div key={h} className="flex items-center gap-3 bg-gray-800/30 rounded-lg p-3">
@@ -421,27 +496,22 @@ function ImportModal({ projects, session, onClose, onImported }) {
                     {rows[0]?.[h] && <p className="text-xs text-gray-600 truncate mt-0.5">e.g. {String(rows[0][h])}</p>}
                   </div>
                   <span className="text-gray-600 text-sm flex-shrink-0">→</span>
-                  <select
-                    value={mapping[h] || ''}
-                    onChange={e => setMapping(m => ({...m, [h]: e.target.value}))}
+                  <select value={mapping[h]||''} onChange={e => setMapping(m=>({...m,[h]:e.target.value}))}
                     className="bg-gray-800 border border-gray-700 rounded-lg px-2 py-1.5 text-xs text-gray-100 focus:outline-none focus:border-indigo-500 flex-shrink-0 w-40">
-                    {FSM_FIELDS.map(f => <option key={f.value} value={f.value}>{f.label}</option>)}
+                    {FSM_FIELDS.map(f=><option key={f.value} value={f.value}>{f.label}</option>)}
                   </select>
                 </div>
               ))}
             </div>
-
-            <Sel label="Import into project" value={targetProjId} onChange={v => setTargetProjId(projects.find(p=>p.name===v)?.id||v)} options={projects.map(p=>p.name)} placeholder="Select a project..." />
-
+            <Sel label="Import into project" value={targetProjId} onChange={v=>setTargetProjId(projects.find(p=>p.name===v)?.id||v)} options={projects.map(p=>p.name)} placeholder="Select a project..." />
             <div className="flex gap-2">
               <button onClick={() => setStep('upload')} className="bg-gray-800 hover:bg-gray-700 text-gray-400 px-4 py-2 rounded-lg text-sm transition-colors">← Back</button>
-              <button onClick={doImport} disabled={importing || !targetProjId || mappedCount === 0}
+              <button onClick={doImport} disabled={importing||!targetProjId||mappedCount===0}
                 className="bg-indigo-600 hover:bg-indigo-500 disabled:opacity-50 text-white px-5 py-2 rounded-lg text-sm font-semibold transition-colors flex-1">
-                {importing ? 'Importing...' : `Import ${mode==='single'?'1 track':rows.length+' tracks'}`}
+                {importing?'Importing...':`Import ${mode==='single'?'1 track':rows.length+' tracks'}`}
               </button>
             </div>
           </>}
-
         </div>
       </div>
     </div>
@@ -500,7 +570,6 @@ function PitchManager({ projects, session }) {
           + Log Pitch
         </button>
       </div>
-
       <div className="flex gap-2 mb-4 overflow-x-auto pb-1">
         <button onClick={() => setFilterStatus('')}
           className={`px-3 py-1.5 rounded-lg text-xs font-medium border whitespace-nowrap flex-shrink-0 transition-colors ${!filterStatus?'bg-indigo-600 border-indigo-500 text-white':'bg-gray-800 border-gray-700 text-gray-400'}`}>
@@ -517,7 +586,6 @@ function PitchManager({ projects, session }) {
           );
         })}
       </div>
-
       {showForm && (
         <div className="bg-gray-900 border border-gray-700 rounded-xl p-4 mb-4">
           <h3 className="text-sm font-semibold text-gray-200 mb-4">{editing?'Edit Pitch':'Log New Pitch'}</h3>
@@ -559,7 +627,6 @@ function PitchManager({ projects, session }) {
           </div>
         </div>
       )}
-
       {!loaded ? (
         <div className="text-center py-16 text-gray-600">Loading...</div>
       ) : filtered.length===0 ? (
@@ -627,11 +694,12 @@ export default function App({ session }) {
   const proj = projects.find(p=>p.id===projId);
   const filteredTracks = proj?.tracks.filter(t=>(t.data?.title||t.title||'').toLowerCase().includes(search.toLowerCase()))||[];
 
-  const sf = (k,v) => setTrackData(d=>({...d,[k]:v}));
-  const tog = (f,v) => setTrackData(d=>({...d,[f]:d[f].includes(v)?d[f].filter(x=>x!==v):[...d[f],v]}));
-  const updOwner = (f,i,k,v) => setTrackData(d=>({...d,[f]:d[f].map((o,j)=>j===i?{...o,[k]:v}:o)}));
-  const addOwner = f => setTrackData(d=>({...d,[f]:[...d[f],{name:'',role:'',pct:''}]}));
-  const rmOwner = (f,i) => setTrackData(d=>({...d,[f]:d[f].filter((_,j)=>j!==i)}));
+  const sf = useCallback((k,v) => setTrackData(d=>({...d,[k]:v})), []);
+  const tog = useCallback((f,v) => setTrackData(d=>({...d,[f]:d[f].includes(v)?d[f].filter(x=>x!==v):[...d[f],v]})), []);
+  const updOwner = useCallback((f,i,k,v) => setTrackData(d=>({...d,[f]:d[f].map((o,j)=>j===i?{...o,[k]:v}:o)})), []);
+  const addOwner = useCallback(f => setTrackData(d=>({...d,[f]:[...d[f],{name:'',role:'',pct:''}]})), []);
+  const rmOwner = useCallback((f,i) => setTrackData(d=>({...d,[f]:d[f].filter((_,j)=>j!==i)})), []);
+  const pct = useCallback(arr => arr?arr.reduce((s,o)=>s+(parseFloat(o.pct)||0),0):0, []);
 
   const saveTrack = async () => {
     if(trackId){
@@ -669,7 +737,6 @@ export default function App({ session }) {
 
   const togExport = tid => setExportSel(s=>{const n=new Set(s);n.has(tid)?n.delete(tid):n.add(tid);return n;});
   const doExport = ids => {const ts=proj.tracks.filter(t=>ids.includes(t.id));if(ts.length)setPrintData({tracks:ts,projectName:proj.name});};
-  const pct = arr => arr?arr.reduce((s,o)=>s+(parseFloat(o.pct)||0),0):0;
   const signOut = () => supabase.auth.signOut();
   const reloadProjects = async () => {
     const {data} = await supabase.from('projects').select('*, tracks(*)').order('created_at',{ascending:false});
@@ -677,144 +744,12 @@ export default function App({ session }) {
   };
 
   if(printData)return <PrintPreview tracks={printData.tracks} projectName={printData.projectName} onBack={() => setPrintData(null)} />;
-
-  function renderSec() {
-    if(!trackData)return null;
-    function OwnerRows({field,roles}) {
-      return (
-        <div className="flex flex-col gap-3">
-          {trackData[field].map((o,i) => (
-            <div key={i} className="flex flex-col gap-2 bg-gray-800/50 rounded-lg p-3">
-              <input value={o.name} onChange={e=>updOwner(field,i,'name',e.target.value)} placeholder="Full Name" className={inp} />
-              <div className="flex gap-2">
-                <select value={o.role} onChange={e=>updOwner(field,i,'role',e.target.value)} className={`${inp} flex-1`}>
-                  <option value="">Role</option>{roles.map(r=><option key={r}>{r}</option>)}
-                </select>
-                <div className="flex items-center gap-1 w-24">
-                  <input value={o.pct} onChange={e=>updOwner(field,i,'pct',e.target.value)} placeholder="%" className={`${inp} text-center`} />
-                </div>
-                {trackData[field].length>1 && <button onClick={()=>rmOwner(field,i)} className="text-gray-600 hover:text-red-400 text-xl px-1">×</button>}
-              </div>
-            </div>
-          ))}
-          <button onClick={() => addOwner(field)} className="text-xs text-indigo-400 hover:text-indigo-300 text-left w-fit">+ Add owner</button>
-        </div>
-      );
-    }
-    switch(sec) {
-      case 0: return (<div className="flex flex-col gap-3">
-        <Inp label="Track Title *" value={trackData.title} onChange={v=>sf('title',v)} />
-        <Inp label="Artist" value={trackData.artist} onChange={v=>sf('artist',v)} />
-        <Inp label="Featuring" value={trackData.featuring} onChange={v=>sf('featuring',v)} placeholder="ft. Artist Name" />
-        <Inp label="Album Artist" value={trackData.albumArtist} onChange={v=>sf('albumArtist',v)} />
-        <div className="grid grid-cols-2 gap-3">
-          <Inp label="Track Number" value={trackData.trackNum} onChange={v=>sf('trackNum',v)} placeholder="e.g. 3" />
-          <Inp label="Duration" value={trackData.duration} onChange={v=>sf('duration',v)} placeholder="e.g. 3:42" />
-        </div>
-      </div>);
-      case 1: return (<div className="flex flex-col gap-3">
-        <Inp label="ISRC" value={trackData.isrc} onChange={v=>sf('isrc',v)} placeholder="e.g. USRC12345678" />
-        <Inp label="ISNI" value={trackData.isni} onChange={v=>sf('isni',v)} />
-        <Inp label="IPI" value={trackData.ipi} onChange={v=>sf('ipi',v)} />
-        <Inp label="ISWC" value={trackData.iswc} onChange={v=>sf('iswc',v)} />
-        <Inp label="UPC/EAN" value={trackData.upc} onChange={v=>sf('upc',v)} />
-        <Sel label="PRO" value={trackData.pro} onChange={v=>sf('pro',v)} options={PROS} />
-        <Inp label="Publisher" value={trackData.publisher} onChange={v=>sf('publisher',v)} />
-        <Inp label="Label" value={trackData.label} onChange={v=>sf('label',v)} />
-        <Inp label="Master Owner" value={trackData.masterOwner} onChange={v=>sf('masterOwner',v)} />
-        <div className="grid grid-cols-2 gap-3">
-          <Inp label="Copyright Year" value={trackData.copyrightYear} onChange={v=>sf('copyrightYear',v)} placeholder="e.g. 2024" />
-          <Inp label="Release Date" value={trackData.releaseDate} onChange={v=>sf('releaseDate',v)} type="date" />
-          <Sel label="File Format" value={trackData.fileFormat} onChange={v=>sf('fileFormat',v)} options={FORMATS} />
-          <Sel label="Sample Rate" value={trackData.sampleRate} onChange={v=>sf('sampleRate',v)} options={SAMPLE_RATES} />
-        </div>
-        <Sel label="Bit Depth" value={trackData.bitDepth} onChange={v=>sf('bitDepth',v)} options={BIT_DEPTHS} />
-      </div>);
-      case 2: return (<div className="flex flex-col gap-3">
-        <div className="grid grid-cols-2 gap-3">
-          <Inp label="BPM" value={trackData.bpm} onChange={v=>sf('bpm',v)} placeholder="e.g. 120" />
-          <Sel label="Key" value={trackData.key} onChange={v=>sf('key',v)} options={KEYS} />
-        </div>
-        <Sel label="Time Signature" value={trackData.timeSig} onChange={v=>sf('timeSig',v)} options={TIME_SIGS} />
-        <Inp label="Genre" value={trackData.genre} onChange={v=>sf('genre',v)} placeholder="e.g. Hip-Hop" />
-        <Inp label="Sub-Genre" value={trackData.subGenre} onChange={v=>sf('subGenre',v)} placeholder="e.g. Trap" />
-        <Sel label="Tempo Feel" value={trackData.tempoFeel} onChange={v=>sf('tempoFeel',v)} options={TEMPO_FEELS} />
-        <Sel label="Vocals" value={trackData.hasVocals} onChange={v=>sf('hasVocals',v)} options={['Yes','No','Instrumental Version Available']} />
-        {trackData.hasVocals==='Yes' && <>
-          <Sel label="Vocal Type" value={trackData.vocalType} onChange={v=>sf('vocalType',v)} options={VOCAL_TYPES} />
-          <Sel label="Language" value={trackData.language} onChange={v=>sf('language',v)} options={LANGUAGES} />
-        </>}
-        <div className="flex items-center gap-3">
-          <input type="checkbox" checked={trackData.explicit} onChange={e=>sf('explicit',e.target.checked)} className="w-5 h-5 accent-indigo-500 cursor-pointer" id="exp" />
-          <label htmlFor="exp" className="text-sm text-gray-300 cursor-pointer">Explicit Content</label>
-        </div>
-      </div>);
-      case 3: return (<div className="flex flex-col gap-5">
-        <Tags label="Moods" options={MOODS} selected={trackData.moods} onToggle={v=>tog('moods',v)} />
-        <Tags label="Instruments" options={INSTRUMENTS} selected={trackData.instruments} onToggle={v=>tog('instruments',v)} />
-        <div className="flex flex-col gap-1">
-          <label className="text-xs text-gray-400 font-medium">Themes / Keywords</label>
-          <input value={trackData.themes} onChange={e=>sf('themes',e.target.value)} placeholder="e.g. loss, redemption, summer" className={inp} />
-        </div>
-        <div className="flex flex-col gap-4 bg-gray-800/50 rounded-xl p-4 border border-gray-700">
-          <p className="text-xs text-gray-500 font-semibold uppercase tracking-wider">Audio Features</p>
-          <Slider label="Energy" value={trackData.energy} onChange={v=>sf('energy',v)} />
-          <Slider label="Danceability" value={trackData.danceability} onChange={v=>sf('danceability',v)} />
-          <Slider label="Acousticness" value={trackData.acousticness} onChange={v=>sf('acousticness',v)} />
-          <Slider label="Instrumentalness" value={trackData.instrumentalness} onChange={v=>sf('instrumentalness',v)} />
-          <Slider label="Valence (Positivity)" value={trackData.valence} onChange={v=>sf('valence',v)} />
-        </div>
-      </div>);
-      case 4: return (<div className="flex flex-col gap-5">
-        <div>
-          <label className="text-xs text-gray-400 font-medium block mb-3">AI Assisted</label>
-          <div className="flex gap-2">
-            {['No','Partially','Yes'].map(opt => (
-              <button key={opt} onClick={()=>sf('aiAssisted',opt)}
-                className={`py-3 rounded-lg text-sm font-semibold border transition-colors flex-1 ${trackData.aiAssisted===opt?opt==='No'?'bg-green-600 border-green-500 text-white':opt==='Yes'?'bg-red-600 border-red-500 text-white':'bg-yellow-500 border-yellow-400 text-gray-900':'bg-gray-800 border-gray-700 text-gray-400'}`}>{opt}</button>
-            ))}
-          </div>
-        </div>
-        {trackData.aiAssisted!=='No' && <div className="flex flex-col gap-1"><label className="text-xs text-gray-400 font-medium">What was AI-assisted?</label><textarea value={trackData.aiNotes} onChange={e=>sf('aiNotes',e.target.value)} rows={3} className={`${inp} resize-none`} /></div>}
-        {trackData.aiAssisted==='No' && <div className="bg-green-900/20 border border-green-800 rounded-xl p-4 text-sm text-green-400">✓ 100% human-created content</div>}
-      </div>);
-      case 5: return (<div className="flex flex-col gap-6">
-        <div>
-          <div className="flex items-center justify-between mb-3">
-            <h4 className="text-sm font-semibold text-gray-200">Master Recording</h4>
-            <span className={`text-xs font-semibold px-2 py-0.5 rounded-full ${pct(trackData.masterOwners)===100?'bg-green-900/50 text-green-400':'bg-gray-800 text-gray-500'}`}>{pct(trackData.masterOwners)}%</span>
-          </div>
-          <OwnerRows field="masterOwners" roles={WRITER_ROLES} />
-        </div>
-        <div className="border-t border-gray-800" />
-        <div>
-          <div className="flex items-center justify-between mb-3">
-            <h4 className="text-sm font-semibold text-gray-200">Publishing</h4>
-            <span className={`text-xs font-semibold px-2 py-0.5 rounded-full ${pct(trackData.pubOwners)===100?'bg-green-900/50 text-green-400':'bg-gray-800 text-gray-500'}`}>{pct(trackData.pubOwners)}%</span>
-          </div>
-          <OwnerRows field="pubOwners" roles={PUB_ROLES} />
-        </div>
-      </div>);
-      case 6: return (<div className="flex flex-col gap-4">
-        <Inp label="Contact Name" value={trackData.contactName} onChange={v=>sf('contactName',v)} />
-        <Inp label="Email" value={trackData.contactEmail} onChange={v=>sf('contactEmail',v)} type="email" />
-        <Inp label="Phone" value={trackData.contactPhone} onChange={v=>sf('contactPhone',v)} />
-        <div className="flex flex-col gap-1">
-          <label className="text-xs text-gray-400 font-medium">Additional Comments</label>
-          <textarea value={trackData.comments} onChange={e=>sf('comments',e.target.value)} rows={5} className={`${inp} resize-none`} />
-        </div>
-      </div>);
-      default: return null;
-    }
-  }
-
   if(!loaded)return <div className="flex items-center justify-center h-screen bg-gray-950 text-gray-400">Loading...</div>;
 
   return (
     <div className="min-h-screen bg-gray-950 text-gray-100 w-full overflow-x-hidden">
       {showImport && <ImportModal projects={projects} session={session} onClose={() => setShowImport(false)} onImported={reloadProjects} />}
 
-      {/* Top Nav */}
       {view === 'dashboard' && (
         <div className="border-b border-gray-800 px-4 py-3 flex items-center justify-between sticky top-0 bg-gray-950 z-40">
           <div className="flex items-center gap-3">
@@ -857,10 +792,8 @@ export default function App({ session }) {
         </div>
       )}
 
-      {/* Pitch Manager */}
       {view==='dashboard' && tab==='pitches' && <PitchManager projects={projects} session={session} />}
 
-      {/* Projects Dashboard */}
       {view==='dashboard' && tab==='projects' && (
         <div className="px-4 py-6 max-w-4xl mx-auto">
           {showAddProj && (
@@ -907,12 +840,9 @@ export default function App({ session }) {
         </div>
       )}
 
-      {/* Project View */}
       {view==='project' && (
         <div className="px-4 py-5 max-w-4xl mx-auto">
-          <button onClick={() => setView('dashboard')} className="text-gray-500 hover:text-gray-300 text-sm transition-colors mb-4 flex items-center gap-1">
-            ← Projects
-          </button>
+          <button onClick={() => setView('dashboard')} className="text-gray-500 hover:text-gray-300 text-sm transition-colors mb-4 flex items-center gap-1">← Projects</button>
           <div className="flex items-start justify-between mb-4">
             <div className="flex-1 min-w-0 pr-3">
               <h1 className="text-xl font-bold text-white truncate">{proj?.name}</h1>
@@ -923,7 +853,6 @@ export default function App({ session }) {
               <button onClick={addTrack} className="bg-indigo-600 hover:bg-indigo-500 text-white px-3 py-2 rounded-lg text-xs font-semibold transition-colors">+ Track</button>
             </div>
           </div>
-
           <div className="flex gap-2 mb-4">
             <input value={search} onChange={e=>setSearch(e.target.value)} placeholder="Search tracks..." className={`${inp} flex-1`} />
             {exportSel.size>0 && (
@@ -938,7 +867,6 @@ export default function App({ session }) {
               {exportSel.size===proj?.tracks.length?'Deselect All':'Select All'}
             </button>
           )}
-
           {filteredTracks.length===0 ? (
             <div className="text-center py-16 text-gray-600">
               {proj?.tracks.length===0?<><div className="text-3xl mb-2">♪</div><p className="text-sm">No tracks yet — tap + Track</p></>:<p className="text-sm">No tracks match "{search}"</p>}
@@ -977,8 +905,7 @@ export default function App({ session }) {
         </div>
       )}
 
-      {/* Track Form */}
-      {view==='track' && (
+      {view==='track' && trackData && (
         <div className="px-4 py-5 max-w-3xl mx-auto pb-24">
           <div className="flex items-center gap-2 mb-5 text-sm overflow-hidden">
             <button onClick={() => setView('dashboard')} className="text-gray-600 hover:text-gray-400 transition-colors flex-shrink-0">Projects</button>
@@ -987,19 +914,24 @@ export default function App({ session }) {
             <span className="text-gray-700 flex-shrink-0">›</span>
             <span className="text-gray-400 truncate">{trackData?.title||'New Track'}</span>
           </div>
-
           <div className="flex gap-1 mb-5 overflow-x-auto pb-1 -mx-1 px-1">
             {SECTIONS.map((s,i) => (
               <button key={i} onClick={() => setSec(i)}
                 className={`px-3 py-2 rounded-lg text-xs font-medium whitespace-nowrap transition-colors flex-shrink-0 ${sec===i?'bg-indigo-600 text-white':'bg-gray-800 text-gray-500 hover:text-gray-300'}`}>{s}</button>
             ))}
           </div>
-
-          <div className="bg-gray-900 border border-gray-800 rounded-xl p-4 mb-4">
-            <h3 className="text-sm font-semibold text-gray-200 mb-4">{SECTIONS[sec]}</h3>
-            {renderSec()}
-          </div>
-
+          <TrackForm
+            trackData={trackData}
+            sec={sec}
+            sf={sf}
+            tog={tog}
+            updOwner={updOwner}
+            addOwner={addOwner}
+            rmOwner={rmOwner}
+            pct={pct}
+            saveTrack={saveTrack}
+            setSec={setSec}
+          />
           <div className="fixed bottom-0 left-0 right-0 bg-gray-950 border-t border-gray-800 px-4 py-3 flex items-center justify-between gap-2">
             <button onClick={() => setSec(s=>Math.max(0,s-1))} disabled={sec===0}
               className="bg-gray-800 hover:bg-gray-700 disabled:opacity-30 text-gray-300 px-4 py-2.5 rounded-lg text-sm transition-colors">← Prev</button>

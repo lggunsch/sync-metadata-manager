@@ -14,15 +14,20 @@ export default function ResetPassword() {
     });
   }, []);
 
-  const handleReset = async () => {
-    if (password !== confirm) return setMessage("Passwords don't match.");
-    if (password.length < 6) return setMessage("Password must be at least 6 characters.");
-    setLoading(true);
-    const { error } = await supabase.auth.updateUser({ password });
-    if (error) setMessage(error.message);
-    else setMessage("Password updated successfully. You can now sign in.");
+const handleReset = async () => {
+  if (password !== confirm) return setMessage("Passwords don't match.");
+  if (password.length < 6) return setMessage("Password must be at least 6 characters.");
+  setLoading(true);
+  const { error } = await supabase.auth.updateUser({ password });
+  if (error) {
+    setMessage(error.message);
     setLoading(false);
-  };
+  } else {
+    setMessage("Password updated successfully. Redirecting...");
+    await supabase.auth.signOut();
+    setTimeout(() => { window.location.href = '/'; }, 1500);
+  }
+};
 
   const inp = "w-full bg-gray-800 border border-gray-700 rounded-lg px-3 py-2 text-sm text-gray-100 placeholder-gray-600 focus:outline-none focus:border-indigo-500";
 

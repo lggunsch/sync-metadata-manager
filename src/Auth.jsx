@@ -19,6 +19,14 @@ export default function Auth() {
     setLoading(false);
   };
 
+  const forgotPassword = async () => {
+    if (!email) return setMessage("Enter your email first.");
+    await supabase.auth.resetPasswordForEmail(email, {
+      redirectTo: 'https://app.friedsodamusic.com'
+    });
+    setMessage("Check your email for a password reset link.");
+  };
+
   const inp = "w-full bg-gray-800 border border-gray-700 rounded-lg px-3 py-2 text-sm text-gray-100 placeholder-gray-600 focus:outline-none focus:border-indigo-500";
 
   return (
@@ -29,20 +37,42 @@ export default function Auth() {
           <p className="text-gray-500 text-sm mt-1">Sync Metadata Manager</p>
         </div>
         <div className="bg-gray-900 border border-gray-800 rounded-xl p-6 flex flex-col gap-4">
-          <h2 className="text-sm font-semibold text-gray-200">{isLogin ? "Sign in to your account" : "Create an account"}</h2>
-          <input value={email} onChange={e => setEmail(e.target.value)}
-            placeholder="Email" type="email" className={inp} />
-          <input value={password} onChange={e => setPassword(e.target.value)}
-            placeholder="Password" type="password" className={inp} />
+          <h2 className="text-sm font-semibold text-gray-200">
+            {isLogin ? "Sign in to your account" : "Create an account"}
+          </h2>
+          <input
+            value={email}
+            onChange={e => setEmail(e.target.value)}
+            placeholder="Email"
+            type="email"
+            className={inp}
+          />
+          <input
+            value={password}
+            onChange={e => setPassword(e.target.value)}
+            placeholder="Password"
+            type="password"
+            className={inp}
+          />
           {message && <p className="text-xs text-indigo-400">{message}</p>}
-          <button onClick={handle} disabled={loading}
+          <button
+            onClick={handle}
+            disabled={loading}
             className="bg-indigo-600 hover:bg-indigo-500 disabled:opacity-50 text-white py-2 rounded-lg text-sm font-semibold transition-colors">
             {loading ? "Loading..." : isLogin ? "Sign In" : "Sign Up"}
           </button>
-          <button onClick={() => { setIsLogin(!isLogin); setMessage(""); }}
+          <button
+            onClick={() => { setIsLogin(!isLogin); setMessage(""); }}
             className="text-xs text-gray-500 hover:text-gray-300 transition-colors">
             {isLogin ? "Don't have an account? Sign up" : "Already have an account? Sign in"}
           </button>
+          {isLogin && (
+            <button
+              onClick={forgotPassword}
+              className="text-xs text-gray-600 hover:text-gray-400 transition-colors">
+              Forgot password?
+            </button>
+          )}
         </div>
       </div>
     </div>

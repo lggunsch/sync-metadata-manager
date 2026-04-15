@@ -3,6 +3,7 @@ import { supabase } from "./supabase";
 import App from "./App";
 import Auth from "./Auth";
 import Paywall from "./Paywall";
+import ResetPassword from "./ResetPassword";
 
 export default function Root() {
   const [session, setSession] = useState(null);
@@ -55,7 +56,8 @@ export default function Root() {
     </div>
   );
 
-  if (!session) return <Auth />;
+  if (window.location.hash.includes('type=recovery')) return <ResetPassword />;
+if (!session) return <Auth />;
   if (!hasAccess) return <Paywall session={session} />;
   return <App session={session} />;
 }

@@ -239,53 +239,150 @@ function ImportModal({ projects, session, onClose, onImported }) {
   const [targetProjId, setTargetProjId] = useState('');
   const [rows, setRows] = useState([]);
   const [headers, setHeaders] = useState([]);
-  const [step, setStep] = useState('upload');
+  const [mapping, setMapping] = useState({});
+  const [step, setStep] = useState('upload'); // 'upload' | 'map' | 'preview'
   const [importing, setImporting] = useState(false);
   const fileRef = useRef();
 
+  const FSM_FIELDS = [
+    { value: '', label: '— Skip this column —' },
+    { value: 'title', label: 'Track Title' },
+    { value: 'artist', label: 'Artist' },
+    { value: 'featuring', label: 'Featuring' },
+    { value: 'albumArtist', label: 'Album Artist' },
+    { value: 'trackNum', label: 'Track Number' },
+    { value: 'duration', label: 'Duration' },
+    { value: 'isrc', label: 'ISRC' },
+    { value: 'isni', label: 'ISNI' },
+    { value: 'ipi', label: 'IPI' },
+    { value: 'iswc', label: 'ISWC' },
+    { value: 'upc', label: 'UPC/EAN' },
+    { value: 'pro', label: 'PRO' },
+    { value: 'publisher', label: 'Publisher' },
+    { value: 'label', label: 'Label' },
+    { value: 'masterOwner', label: 'Master Owner' },
+    { value: 'copyrightYear', label: 'Copyright Year' },
+    { value: 'releaseDate', label: 'Release Date' },
+    { value: 'fileFormat', label: 'File Format' },
+    { value: 'sampleRate', label: 'Sample Rate' },
+    { value: 'bitDepth', label: 'Bit Depth' },
+    { value: 'bpm', label: 'BPM' },
+    { value: 'key', label: 'Key' },
+    { value: 'timeSig', label: 'Time Signature' },
+    { value: 'genre', label: 'Genre' },
+    { value: 'subGenre', label: 'Sub-Genre' },
+    { value: 'tempoFeel', label: 'Tempo Feel' },
+    { value: 'hasVocals', label: 'Has Vocals' },
+    { value: 'vocalType', label: 'Vocal Type' },
+    { value: 'language', label: 'Language' },
+    { value: 'explicit', label: 'Explicit' },
+    { value: 'themes', label: 'Themes / Keywords' },
+    { value: 'moods', label: 'Moods' },
+    { value: 'instruments', label: 'Instruments' },
+    { value: 'energy', label: 'Energy' },
+    { value: 'danceability', label: 'Danceability' },
+    { value: 'acousticness', label: 'Acousticness' },
+    { value: 'instrumentalness', label: 'Instrumentalness' },
+    { value: 'valence', label: 'Valence' },
+    { value: 'aiAssisted', label: 'AI Assisted' },
+    { value: 'aiNotes', label: 'AI Notes' },
+    { value: 'contactName', label: 'Contact Name' },
+    { value: 'contactEmail', label: 'Contact Email' },
+    { value: 'contactPhone', label: 'Contact Phone' },
+    { value: 'comments', label: 'Comments / Notes' },
+  ];
+
   const parseFile = async (file) => {
     const ext = file.name.split('.').pop().toLowerCase();
+    let hdrs = [], data = [];
     if (ext === 'csv') {
       const text = await file.text();
       const lines = text.split('\n').filter(l => l.trim());
-      const hdrs = lines[0].split(',').map(h => h.trim().replace(/^"|"$/g,''));
-      const data = lines.slice(1).map(line => {
-        const vals = line.split(',').map(v => v.trim().replace(/^"|"$/g,''));
-        return Object.fromEntries(hdrs.map((h,i) => [h, vals[i]||'']));
+      hdrs = lines[0].split(',').map(h => h.trim().replace(/^"|"$/g, ''));
+      data = lines.slice(1).map(line => {
+        const vals = line.split(',').map(v => v.trim().replace(/^"|"$/g, ''));
+        return Object.fromEntries(hdrs.map((h, i) => [h, vals[i] || '']));
       }).filter(r => Object.values(r).some(v => v));
-      setHeaders(hdrs); setRows(data); setStep('preview');
-    } else if (ext==='xlsx'||ext==='xls') {
-      const reader = new FileReader();
-      reader.onload = async (e) => {
-        const {read,utils} = await import('https://cdn.sheetjs.com/xlsx-0.20.1/package/xlsx.mjs');
-        const wb = read(e.target.result,{type:'array'});
-        const ws = wb.Sheets[wb.SheetNames[0]];
-        const data = utils.sheet_to_json(ws,{defval:''});
-        if(data.length){setHeaders(Object.keys(data[0]));setRows(data);setStep('preview');}
-      };
-      reader.readAsArrayBuffer(file);
+    } else if (ext === 'xlsx' || ext === 'xls') {
+      await new Promise((resolve) => {
+        const reader = new FileReader();
+        reader.onload = async (e) => {
+          const { read, utils } = await import('https://cdn.sheetjs.com/xlsx-0.20.1/package/xlsx.mjs');
+          const wb = read(e.target.result, { type: 'array' });
+          const ws = wb.Sheets[wb.SheetNames[0]];
+          data = utils.sheet_to_json(ws, { defval: '' });
+          if (data.length) hdrs = Object.keys(data[0]);
+          resolve();
+        };
+        reader.readAsArrayBuffer(file);
+      });
     }
+    if (!hdrs.length) return;
+
+    // Auto-detect mappings
+    const autoMap = {};
+    hdrs.forEach(h => {
+      const detected = FIELD_MAP[h.toLowerCase().trim()];
+      autoMap[h] = detected || '';
+    });
+
+    setHeaders(hdrs);
+    setRows(data);
+    setMapping(autoMap);
+    setStep('map');
+  };
+
+  const applyMapping = (rows) => {
+    return rows.map(row => {
+      const track = newTrackData();
+      for (const [col, fsField] of Object.entries(mapping)) {
+        if (!fsField) continue;
+        const val = row[col];
+        if (val === undefined || val === null || val === '') continue;
+        if (fsField === 'moods' || fsField === 'instruments') {
+          track[fsField] = String(val).split(',').map(s => s.trim()).filter(Boolean);
+        } else if (fsField === 'explicit') {
+          track[fsField] = String(val).toLowerCase() === 'yes' || val === true || val === 1;
+        } else if (['energy','danceability','acousticness','instrumentalness','valence'].includes(fsField)) {
+          track[fsField] = Math.min(100, Math.max(0, parseFloat(val) || 50));
+        } else {
+          track[fsField] = String(val);
+        }
+      }
+      return track;
+    });
   };
 
   const doImport = async () => {
     if (!targetProjId) return alert('Please select a project first.');
     setImporting(true);
-    const tracksToImport = mode==='single'?[rows[0]]:rows;
-    for (const row of tracksToImport) {
-      await supabase.from('tracks').insert({project_id:targetProjId,user_id:session.user.id,data:mapRow(row)});
+    const tracksToImport = mode === 'single' ? [rows[0]] : rows;
+    const mapped = applyMapping(tracksToImport);
+    for (const trackData of mapped) {
+      await supabase.from('tracks').insert({ project_id: targetProjId, user_id: session.user.id, data: trackData });
     }
-    setImporting(false); onImported(); onClose();
+    setImporting(false);
+    onImported();
+    onClose();
   };
+
+  const mappedCount = Object.values(mapping).filter(Boolean).length;
 
   return (
     <div className="fixed inset-0 bg-black/70 flex items-center justify-center z-50 p-4">
       <div className="bg-gray-900 border border-gray-700 rounded-xl w-full max-w-2xl max-h-[85vh] flex flex-col">
         <div className="flex items-center justify-between p-4 border-b border-gray-800">
-          <h2 className="text-sm font-semibold text-gray-100">Import Tracks from File</h2>
+          <div>
+            <h2 className="text-sm font-semibold text-gray-100">Import Tracks from File</h2>
+            {step === 'map' && <p className="text-xs text-gray-500 mt-0.5">Match your columns to FSM fields</p>}
+          </div>
           <button onClick={onClose} className="text-gray-600 hover:text-gray-300 text-xl">×</button>
         </div>
+
         <div className="p-4 flex flex-col gap-4 overflow-y-auto flex-1">
-          {step==='upload' && <>
+
+          {/* Step 1 — Upload */}
+          {step === 'upload' && <>
             <div className="flex gap-2">
               {['single','bulk'].map(m => (
                 <button key={m} onClick={() => setMode(m)}
@@ -294,6 +391,10 @@ function ImportModal({ projects, session, onClose, onImported }) {
                 </button>
               ))}
             </div>
+            <p className="text-xs text-gray-500">
+              {mode==='single'?'Upload a file with one row of track data.':'Upload a file where each row is a track.'}
+              {' '}Column names will be auto-detected — you can adjust any mappings before importing.
+            </p>
             <Sel label="Import into project" value={targetProjId} onChange={setTargetProjId} options={projects.map(p=>p.name)} placeholder="Select a project..." />
             <div className="border-2 border-dashed border-gray-700 rounded-xl p-6 text-center cursor-pointer hover:border-gray-500 transition-colors"
               onClick={() => fileRef.current.click()}>
@@ -301,22 +402,46 @@ function ImportModal({ projects, session, onClose, onImported }) {
               <p className="text-sm text-gray-400">Tap to upload CSV or Excel</p>
               <p className="text-xs text-gray-600 mt-1">.csv, .xlsx, .xls</p>
               <input ref={fileRef} type="file" accept=".csv,.xlsx,.xls" className="hidden"
-                onChange={e => {if(e.target.files[0])parseFile(e.target.files[0]);}} />
+                onChange={e => { if(e.target.files[0]) parseFile(e.target.files[0]); }} />
             </div>
           </>}
-          {step==='preview' && <>
-            <div className="bg-gray-800/50 border border-gray-700 rounded-xl p-3">
-              <p className="text-xs text-gray-400 font-medium">{rows.length} row{rows.length!==1?'s':''} · {headers.length} columns</p>
+
+          {/* Step 2 — Column Mapper */}
+          {step === 'map' && <>
+            <div className="bg-gray-800/50 border border-gray-700 rounded-xl p-3 flex items-center justify-between">
+              <p className="text-xs text-gray-400">{rows.length} row{rows.length!==1?'s':''} · {headers.length} columns detected</p>
+              <span className="text-xs text-indigo-400 font-medium">{mappedCount} mapped</span>
             </div>
-            <Sel label="Import into project" value={targetProjId} onChange={v=>setTargetProjId(projects.find(p=>p.name===v)?.id||v)} options={projects.map(p=>p.name)} placeholder="Select a project..." />
+
+            <div className="flex flex-col gap-2">
+              {headers.map(h => (
+                <div key={h} className="flex items-center gap-3 bg-gray-800/30 rounded-lg p-3">
+                  <div className="flex-1 min-w-0">
+                    <p className="text-xs font-medium text-gray-300 truncate">{h}</p>
+                    {rows[0]?.[h] && <p className="text-xs text-gray-600 truncate mt-0.5">e.g. {String(rows[0][h])}</p>}
+                  </div>
+                  <span className="text-gray-600 text-sm flex-shrink-0">→</span>
+                  <select
+                    value={mapping[h] || ''}
+                    onChange={e => setMapping(m => ({...m, [h]: e.target.value}))}
+                    className="bg-gray-800 border border-gray-700 rounded-lg px-2 py-1.5 text-xs text-gray-100 focus:outline-none focus:border-indigo-500 flex-shrink-0 w-40">
+                    {FSM_FIELDS.map(f => <option key={f.value} value={f.value}>{f.label}</option>)}
+                  </select>
+                </div>
+              ))}
+            </div>
+
+            <Sel label="Import into project" value={targetProjId} onChange={v => setTargetProjId(projects.find(p=>p.name===v)?.id||v)} options={projects.map(p=>p.name)} placeholder="Select a project..." />
+
             <div className="flex gap-2">
               <button onClick={() => setStep('upload')} className="bg-gray-800 hover:bg-gray-700 text-gray-400 px-4 py-2 rounded-lg text-sm transition-colors">← Back</button>
-              <button onClick={doImport} disabled={importing||!targetProjId}
+              <button onClick={doImport} disabled={importing || !targetProjId || mappedCount === 0}
                 className="bg-indigo-600 hover:bg-indigo-500 disabled:opacity-50 text-white px-5 py-2 rounded-lg text-sm font-semibold transition-colors flex-1">
-                {importing?'Importing...':`Import ${mode==='single'?'1 track':rows.length+' tracks'}`}
+                {importing ? 'Importing...' : `Import ${mode==='single'?'1 track':rows.length+' tracks'}`}
               </button>
             </div>
           </>}
+
         </div>
       </div>
     </div>

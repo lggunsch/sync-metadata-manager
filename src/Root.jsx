@@ -9,6 +9,9 @@ export default function Root() {
   const [session, setSession] = useState(null);
   const [loading, setLoading] = useState(true);
   const [hasAccess, setHasAccess] = useState(false);
+  const [isRecovery, setIsRecovery] = useState(
+    window.location.hash.includes('type=recovery')
+  );
 
   useEffect(() => {
     supabase.auth.getSession().then(({ data: { session } }) => {
@@ -16,11 +19,18 @@ export default function Root() {
       if (session) checkAccess(session.user.id);
       else setLoading(false);
     });
-    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
+
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
+      if (event === 'PASSWORD_RECOVERY') {
+        setIsRecovery(true);
+        setLoading(false);
+        return;
+      }
       setSession(session);
       if (session) checkAccess(session.user.id);
       else { setHasAccess(false); setLoading(false); }
     });
+
     return () => subscription.unsubscribe();
   }, []);
 
@@ -50,15 +60,15 @@ export default function Root() {
     setLoading(false);
   };
 
-if (window.location.hash.includes('type=recovery')) return <ResetPassword />;
+  if (isRecovery) return <ResetPassword />;
 
-if (loading) return (
-  <div className="flex items-center justify-center h-screen bg-gray-950 text-gray-400">
-    Loading...
-  </div>
-);
+  if (loading) return (
+    <div className="flex items-center justify-center h-screen bg-gray-950 text-gray-400">
+      Loading...
+    </div>
+  );
 
-if (!session) return <Auth />;
-if (!hasAccess) return <Paywall session={session} />;
-return <App session={session} />;
+  if (!session) return <Auth />;
+  if (!hasAccess) return <Paywall session={session} />;
+  return <App session={session} />;
 }

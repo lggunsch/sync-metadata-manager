@@ -50,14 +50,15 @@ export default function Root() {
     setLoading(false);
   };
 
-  if (loading) return (
-    <div className="flex items-center justify-center h-screen bg-gray-950 text-gray-400">
-      Loading...
-    </div>
-  );
+if (window.location.hash.includes('type=recovery')) return <ResetPassword />;
 
-  if (window.location.hash.includes('type=recovery')) return <ResetPassword />;
+if (loading) return (
+  <div className="flex items-center justify-center h-screen bg-gray-950 text-gray-400">
+    Loading...
+  </div>
+);
+
 if (!session) return <Auth />;
-  if (!hasAccess) return <Paywall session={session} />;
-  return <App session={session} />;
+if (!hasAccess) return <Paywall session={session} />;
+return <App session={session} />;
 }

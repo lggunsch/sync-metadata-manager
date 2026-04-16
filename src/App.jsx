@@ -451,7 +451,7 @@ function ImportModal({ projects, session, onClose, onImported }) {
     setImporting(false); onImported(); onClose();
   };
 
-  const mappedCount = Object.values(mapping).filter(Boolean).length;
+const mappedCount = Object.values(mapping).filter(Boolean).length;
 
   return (
     <div className="fixed inset-0 bg-black/70 flex items-center justify-center z-50 p-4">
@@ -473,7 +473,14 @@ function ImportModal({ projects, session, onClose, onImported }) {
                 </button>
               ))}
             </div>
-<Sel label="Import into project" value={projects.find(p=>p.id===targetProjId)?.name||''} onChange={v=>setTargetProjId(projects.find(p=>p.name===v)?.id||'')} options={projects.map(p=>p.name)} placeholder="Select a project..." />            <div className="border-2 border-dashed border-gray-700 rounded-xl p-6 text-center cursor-pointer hover:border-gray-500 transition-colors"
+            <div className="flex flex-col gap-1">
+              <label className="text-xs text-gray-400 font-medium">Import into project</label>
+              <select value={targetProjId} onChange={e => setTargetProjId(e.target.value)} className={inp}>
+                <option value="">Select a project...</option>
+                {projects.map(p => <option key={p.id} value={p.id}>{p.name}</option>)}
+              </select>
+            </div>
+            <div className="border-2 border-dashed border-gray-700 rounded-xl p-6 text-center cursor-pointer hover:border-gray-500 transition-colors"
               onClick={() => fileRef.current.click()}>
               <div className="text-3xl mb-2">📂</div>
               <p className="text-sm text-gray-400">Tap to upload CSV or Excel</p>
@@ -502,7 +509,10 @@ function ImportModal({ projects, session, onClose, onImported }) {
                 </div>
               ))}
             </div>
-            <Sel label="Import into project" value={targetProjId} onChange={v=>setTargetProjId(projects.find(p=>p.name===v)?.id||v)} options={projects.map(p=>p.name)} placeholder="Select a project..." />
+            <div className="bg-gray-800/50 border border-gray-700 rounded-lg px-3 py-2 flex items-center justify-between">
+              <span className="text-xs text-gray-400">Importing into</span>
+              <span className="text-xs font-medium text-gray-100">{projects.find(p=>p.id===targetProjId)?.name||'No project selected'}</span>
+            </div>
             <div className="flex gap-2">
               <button onClick={() => setStep('upload')} className="bg-gray-800 hover:bg-gray-700 text-gray-400 px-4 py-2 rounded-lg text-sm transition-colors">← Back</button>
               <button onClick={doImport} disabled={importing||!targetProjId||mappedCount===0}

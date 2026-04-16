@@ -473,8 +473,7 @@ function ImportModal({ projects, session, onClose, onImported }) {
                 </button>
               ))}
             </div>
-            <Sel label="Import into project" value={targetProjId} onChange={setTargetProjId} options={projects.map(p=>p.name)} placeholder="Select a project..." />
-            <div className="border-2 border-dashed border-gray-700 rounded-xl p-6 text-center cursor-pointer hover:border-gray-500 transition-colors"
+<Sel label="Import into project" value={projects.find(p=>p.id===targetProjId)?.name||''} onChange={v=>setTargetProjId(projects.find(p=>p.name===v)?.id||'')} options={projects.map(p=>p.name)} placeholder="Select a project..." />            <div className="border-2 border-dashed border-gray-700 rounded-xl p-6 text-center cursor-pointer hover:border-gray-500 transition-colors"
               onClick={() => fileRef.current.click()}>
               <div className="text-3xl mb-2">📂</div>
               <p className="text-sm text-gray-400">Tap to upload CSV or Excel</p>

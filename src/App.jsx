@@ -786,8 +786,9 @@ export default function App({ session }) {
   const [draft, setDraft] = useState({name:'',artist:'',type:'Album'});
   const [sec, setSec] = useState(0);
   const [exportSel, setExportSel] = useState(new Set());
-  const [printData, setPrintData] = useState(null);
-  const [audioUploading, setAudioUploading] = useState(false);
+const [printData, setPrintData] = useState(null);
+const [shareLink, setShareLink] = useState(null);
+const [shareLoading, setShareLoading] = useState(false);  const [audioUploading, setAudioUploading] = useState(false);
 
   useEffect(() => {
     supabase.from('projects').select('*, tracks(*)').order('created_at',{ascending:false})
@@ -863,6 +864,19 @@ export default function App({ session }) {
 
   const togExport = tid => setExportSel(s=>{const n=new Set(s);n.has(tid)?n.delete(tid):n.add(tid);return n;});
   const doExport = ids => {const ts=proj.tracks.filter(t=>ids.includes(t.id));if(ts.length)setPrintData({tracks:ts,projectName:proj.name});};
+  const doShare = async (ids) => {
+  setShareLoading(true);
+  const name = proj.name;
+  const { data, error } = await supabase
+    .from('playlists')
+    .insert({ user_id: session.user.id, name, track_ids: ids })
+    .select()
+    .single();
+  setShareLoading(false);
+  if (error) { alert('Failed to create share link.'); return; }
+  const link = `${window.location.origin}/p/${data.token}`;
+  setShareLink(link);
+};
   const signOut = () => supabase.auth.signOut();
   const reloadProjects = async () => {
     const {data} = await supabase.from('projects').select('*, tracks(*)').order('created_at',{ascending:false});
@@ -981,11 +995,16 @@ export default function App({ session }) {
           </div>
           <div className="flex gap-2 mb-4">
             <input value={search} onChange={e=>setSearch(e.target.value)} placeholder="Search tracks..." className={`${inp} flex-1`} />
-            {exportSel.size>0 && (
-              <button onClick={() => doExport([...exportSel])} className="bg-emerald-600 hover:bg-emerald-500 text-white px-3 py-2 rounded-lg text-xs font-semibold transition-colors whitespace-nowrap">
-                PDF ({exportSel.size})
-              </button>
-            )}
+{exportSel.size>0 && (
+  <div className="flex gap-2">
+    <button onClick={() => doExport([...exportSel])} className="bg-emerald-600 hover:bg-emerald-500 text-white px-3 py-2 rounded-lg text-xs font-semibold transition-colors whitespace-nowrap">
+      PDF ({exportSel.size})
+    </button>
+    <button onClick={() => doShare([...exportSel])} className="bg-indigo-600 hover:bg-indigo-500 text-white px-3 py-2 rounded-lg text-xs font-semibold transition-colors whitespace-nowrap">
+      Share ({exportSel.size})
+    </button>
+  </div>
+)}
           </div>
           {proj?.tracks.length>1 && (
             <button onClick={() => setExportSel(s=>s.size===proj.tracks.length?new Set():new Set(proj.tracks.map(t=>t.id)))}

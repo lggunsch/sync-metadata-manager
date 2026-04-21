@@ -864,7 +864,7 @@ const [shareLoading, setShareLoading] = useState(false);  const [audioUploading,
 
   const togExport = tid => setExportSel(s=>{const n=new Set(s);n.has(tid)?n.delete(tid):n.add(tid);return n;});
   const doExport = ids => {const ts=proj.tracks.filter(t=>ids.includes(t.id));if(ts.length)setPrintData({tracks:ts,projectName:proj.name});};
-  const doShare = async (ids) => {
+const doShare = async (ids) => {
   setShareLoading(true);
   const name = proj.name;
   const { data, error } = await supabase
@@ -873,7 +873,7 @@ const [shareLoading, setShareLoading] = useState(false);  const [audioUploading,
     .select()
     .single();
   setShareLoading(false);
-  if (error) { alert('Failed to create share link.'); return; }
+  if (error) { alert('Failed to create share link: ' + error.message); return; }
   const link = `${window.location.origin}/p/${data.token}`;
   setShareLink(link);
 };

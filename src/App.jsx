@@ -1,6 +1,7 @@
 import { useState, useEffect, useRef, useCallback } from "react";
 import { supabase } from "./supabase";
 import InstallBanner from "./InstallBanner";
+import AccountSettings from "./AccountSettings";
 
 const MOODS = ['Dark','Uplifting','Melancholic','Intense','Calm','Dreamy','Aggressive','Romantic','Nostalgic','Mysterious','Triumphant','Tense','Playful','Epic','Intimate','Cinematic','Ethereal','Gritty','Anthemic','Hopeful'];
 const INSTRUMENTS = ['Acoustic Guitar','Electric Guitar','Bass Guitar','Drums','Piano','Keys/Organ','Strings','Synth/Pad','Brass','Woodwinds','Choir','Full Orchestra','Electronic/808','Percussion','Violin','Cello','Trumpet','Saxophone','Flute','Banjo','Mandolin','Ukulele','Harp','Harmonica'];
@@ -781,6 +782,7 @@ export default function App({ session }) {
   const [search, setSearch] = useState('');
   const [loaded, setLoaded] = useState(false);
   const [showAddProj, setShowAddProj] = useState(false);
+  const [showAccount, setShowAccount] = useState(false);
   const [showImport, setShowImport] = useState(false);
   const [showMenu, setShowMenu] = useState(false);
   const [draft, setDraft] = useState({name:'',artist:'',type:'Album'});
@@ -882,7 +884,7 @@ const doShare = async (ids) => {
     const {data} = await supabase.from('projects').select('*, tracks(*)').order('created_at',{ascending:false});
     if(data)setProjects(data.map(p=>({...p,tracks:p.tracks||[]})));
   };
-
+if(showAccount) return <AccountSettings session={session} onBack={() => setShowAccount(false)} />;
   if(printData)return <PrintPreview tracks={printData.tracks} projectName={printData.projectName} onBack={() => setPrintData(null)} />;
   if(!loaded)return <div className="flex items-center justify-center h-screen bg-gray-950 text-gray-400">Loading...</div>;
 
@@ -935,10 +937,14 @@ const doShare = async (ids) => {
                     className="w-full text-left px-4 py-3 text-sm text-gray-300 hover:bg-gray-800 transition-colors border-b border-gray-800">
                     Import File
                   </button>}
-                  <button onClick={() => {signOut();setShowMenu(false);}}
-                    className="w-full text-left px-4 py-3 text-sm text-gray-400 hover:bg-gray-800 transition-colors">
-                    Sign Out
-                  </button>
+                  <button onClick={() => {setShowAccount(true);setShowMenu(false);}}
+  className="w-full text-left px-4 py-3 text-sm text-gray-300 hover:bg-gray-800 transition-colors border-b border-gray-800">
+  Account Settings
+</button>
+<button onClick={() => {signOut();setShowMenu(false);}}
+  className="w-full text-left px-4 py-3 text-sm text-gray-400 hover:bg-gray-800 transition-colors">
+  Sign Out
+</button>
                 </div>
               )}
             </div>

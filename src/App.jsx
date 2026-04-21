@@ -621,8 +621,10 @@ function ImportModal({ projects, session, onClose, onImported }) {
   );
 }
 
-function PitchManager({ projects, session }) {
+function PitchManager({ session }) {
   const [pitches, setPitches] = useState([]);
+  const [projects, setProjects] = useState([]);
+  const [views, setViews] = useState({});
   const [loaded, setLoaded] = useState(false);
   const [showForm, setShowForm] = useState(false);
   const [editing, setEditing] = useState(null);
@@ -634,8 +636,39 @@ function PitchManager({ projects, session }) {
   })));
 
   useEffect(() => {
-    supabase.from('pitches').select('*').order('date_sent',{ascending:false})
-      .then(({data}) => {if(data)setPitches(data);setLoaded(true);});
+    const load = async () => {
+      const { data: projData } = await supabase
+        .from('projects')
+        .select('*, tracks(*)')
+        .order('created_at', { ascending: false });
+      if (projData) setProjects(projData.map(p => ({ ...p, tracks: p.tracks || [] })));
+
+      const { data: pitchData } = await supabase
+        .from('pitches')
+        .select('*')
+        .order('date_sent', { ascending: false });
+      if (pitchData) {
+        setPitches(pitchData);
+        const tokens = pitchData.filter(p => p.playlist_token).map(p => p.playlist_token);
+        if (tokens.length) {
+          const { data: viewData } = await supabase
+            .from('playlist_views')
+            .select('*')
+            .in('token', tokens)
+            .order('viewed_at', { ascending: false });
+          if (viewData) {
+            const grouped = {};
+            viewData.forEach(v => {
+              if (!grouped[v.token]) grouped[v.token] = [];
+              grouped[v.token].push(v);
+            });
+            setViews(grouped);
+          }
+        }
+      }
+      setLoaded(true);
+    };
+    load();
   }, []);
 
   const sf = (k,v) => setForm(f => ({...f,[k]:v}));
@@ -660,6 +693,11 @@ function PitchManager({ projects, session }) {
 
   const openEdit = p => {setForm(p);setEditing(p.id);setShowForm(true);};
   const filtered = filterStatus?pitches.filter(p=>p.status===filterStatus):pitches;
+
+  const fmt = ts => {
+    const d = new Date(ts);
+    return d.toLocaleDateString('en-US', { month: 'short', day: 'numeric' }) + ' at ' + d.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' });
+  };
 
   return (
     <div className="px-4 py-6 max-w-4xl mx-auto">
@@ -739,39 +777,176 @@ function PitchManager({ projects, session }) {
         </div>
       ) : (
         <div className="flex flex-col gap-2">
-          {filtered.map(p => (
-            <div key={p.id} className="bg-gray-900 border border-gray-800 rounded-xl p-4">
-              <div className="flex items-start justify-between gap-2">
-                <div className="flex-1 min-w-0">
-                  <div className="flex items-center gap-2 flex-wrap">
-                    <span className="font-medium text-gray-100 text-sm">{p.supervisor_name||'Unknown Supervisor'}</span>
-                    <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${STATUS_COLORS[p.status]||'bg-gray-800 text-gray-500'}`}>{p.status}</span>
+          {filtered.map(p => {
+            const plViews = p.playlist_token ? (views[p.playlist_token] || []) : [];
+            return (
+              <div key={p.id} className="bg-gray-900 border border-gray-800 rounded-xl p-4">
+                <div className="flex items-start justify-between gap-2">
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-center gap-2 flex-wrap">
+                      <span className="font-medium text-gray-100 text-sm">{p.supervisor_name||'Unknown Supervisor'}</span>
+                      <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${STATUS_COLORS[p.status]||'bg-gray-800 text-gray-500'}`}>{p.status}</span>
+                      {plViews.length > 0 && (
+                        <span className="text-xs px-2 py-0.5 rounded-full font-medium bg-green-900/40 text-green-400">
+                          {plViews.length} view{plViews.length !== 1 ? 's' : ''}
+                        </span>
+                      )}
+                    </div>
+                    {p.company && <p className="text-xs text-gray-500 mt-0.5">{p.company}</p>}
+                    <div className="flex gap-2 mt-1 flex-wrap">
+                      {p.track_title && <span className="text-xs text-indigo-400">{p.track_title}</span>}
+                      {p.project_name && <span className="text-xs text-gray-500">{p.project_name}</span>}
+                    </div>
+                    <div className="flex gap-2 mt-0.5 flex-wrap">
+                      {p.date_sent && <span className="text-xs text-gray-600">{p.date_sent}</span>}
+                      {p.method && <span className="text-xs text-gray-600">via {p.method}</span>}
+                    </div>
+                    {p.follow_up_date && <div className="mt-1 text-xs text-yellow-500">Follow-up: {p.follow_up_date}</div>}
+                    {p.notes && <div className="mt-1 text-xs text-gray-500 line-clamp-2">{p.notes}</div>}
+                    {plViews.length > 0 && (
+                      <div className="mt-2 flex flex-col gap-1 border-t border-gray-800 pt-2">
+                        {plViews.slice(0, 3).map(v => (
+                          <p key={v.id} className="text-xs text-gray-600">{fmt(v.viewed_at)}</p>
+                        ))}
+                        {plViews.length > 3 && <p className="text-xs text-gray-700">+{plViews.length - 3} more</p>}
+                      </div>
+                    )}
                   </div>
-                  {p.company && <p className="text-xs text-gray-500 mt-0.5">{p.company}</p>}
-                  <div className="flex gap-2 mt-1 flex-wrap">
-                    {p.track_title && <span className="text-xs text-indigo-400">{p.track_title}</span>}
-                    {p.project_name && <span className="text-xs text-gray-500">{p.project_name}</span>}
+                  <div className="flex gap-2 flex-shrink-0">
+                    <button onClick={() => openEdit(p)} className="text-xs text-gray-500 hover:text-indigo-400 transition-colors py-1">Edit</button>
+                    <button onClick={() => delPitch(p.id)} className="text-gray-600 hover:text-red-400 text-lg leading-none transition-colors py-1">×</button>
                   </div>
-                  <div className="flex gap-2 mt-0.5 flex-wrap">
-                    {p.date_sent && <span className="text-xs text-gray-600">{p.date_sent}</span>}
-                    {p.method && <span className="text-xs text-gray-600">via {p.method}</span>}
-                  </div>
-                  {p.follow_up_date && <div className="mt-1 text-xs text-yellow-500">Follow-up: {p.follow_up_date}</div>}
-                  {p.notes && <div className="mt-1 text-xs text-gray-500 line-clamp-2">{p.notes}</div>}
-                </div>
-                <div className="flex gap-2 flex-shrink-0">
-                  <button onClick={() => openEdit(p)} className="text-xs text-gray-500 hover:text-indigo-400 transition-colors py-1">Edit</button>
-                  <button onClick={() => delPitch(p.id)} className="text-gray-600 hover:text-red-400 text-lg leading-none transition-colors py-1">×</button>
                 </div>
               </div>
-            </div>
-          ))}
+            );
+          })}
         </div>
       )}
     </div>
   );
 }
+function LinksManager({ session }) {
+  const [playlists, setPlaylists] = useState([]);
+  const [views, setViews] = useState({});
+  const [expanded, setExpanded] = useState(null);
+  const [loaded, setLoaded] = useState(false);
 
+  useEffect(() => {
+    const load = async () => {
+      const { data: pls } = await supabase
+        .from('playlists')
+        .select('*')
+        .eq('user_id', session.user.id)
+        .order('created_at', { ascending: false });
+      if (pls) setPlaylists(pls);
+
+      if (pls?.length) {
+        const tokens = pls.map(p => p.token);
+        const { data: viewData } = await supabase
+          .from('playlist_views')
+          .select('*')
+          .in('token', tokens)
+          .order('viewed_at', { ascending: false });
+        if (viewData) {
+          const grouped = {};
+          viewData.forEach(v => {
+            if (!grouped[v.token]) grouped[v.token] = [];
+            grouped[v.token].push(v);
+          });
+          setViews(grouped);
+        }
+      }
+      setLoaded(true);
+    };
+    load();
+  }, [session.user.id]);
+
+  const parseUA = ua => {
+    if (!ua) return 'Unknown device';
+    const browser = ua.includes('Chrome') ? 'Chrome' : ua.includes('Firefox') ? 'Firefox' : ua.includes('Safari') ? 'Safari' : 'Browser';
+    const os = ua.includes('Mac') ? 'Mac' : ua.includes('Windows') ? 'Windows' : ua.includes('iPhone') ? 'iPhone' : ua.includes('Android') ? 'Android' : 'Unknown';
+    return `${browser} on ${os}`;
+  };
+
+  const fmt = ts => {
+    const d = new Date(ts);
+    return d.toLocaleDateString('en-US', { month: 'short', day: 'numeric' }) + ' at ' + d.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' });
+  };
+
+  const copyLink = (token, btnEl) => {
+    navigator.clipboard.writeText(`${window.location.origin}/p/${token}`).then(() => {
+      const orig = btnEl.textContent;
+      btnEl.textContent = 'Copied';
+      setTimeout(() => btnEl.textContent = orig, 1500);
+    });
+  };
+
+  const deletePlaylist = async (id) => {
+    if (!window.confirm('Delete this shared link?')) return;
+    await supabase.from('playlists').delete().eq('id', id);
+    setPlaylists(ps => ps.filter(p => p.id !== id));
+  };
+
+  return (
+    <div className="px-4 py-6 max-w-4xl mx-auto">
+      <div className="mb-5">
+        <h1 className="text-xl font-bold text-white">Shared Links</h1>
+        <p className="text-gray-500 text-xs mt-0.5">Track when supervisors open your playlists</p>
+      </div>
+      {!loaded ? (
+        <div className="text-center py-16 text-gray-600">Loading...</div>
+      ) : playlists.length === 0 ? (
+        <div className="text-center py-16 text-gray-600">
+          <div className="text-3xl mb-2">🔗</div>
+          <p className="text-sm">No shared links yet. Select tracks in a project and hit Share.</p>
+        </div>
+      ) : (
+        <div className="flex flex-col gap-2">
+          {playlists.map(pl => {
+            const plViews = views[pl.token] || [];
+            const isOpen = expanded === pl.id;
+            return (
+              <div key={pl.id} className="bg-gray-900 border border-gray-800 rounded-xl overflow-hidden">
+                <div className="flex items-center gap-3 px-4 py-4 cursor-pointer hover:bg-gray-800/50 transition-colors"
+                  onClick={() => setExpanded(isOpen ? null : pl.id)}>
+                  <div className="flex-1 min-w-0">
+                    <p className="font-medium text-gray-100 text-sm truncate">{pl.name}</p>
+                    <p className="text-xs text-gray-500 mt-0.5">{pl.track_ids.length} track{pl.track_ids.length !== 1 ? 's' : ''} · {plViews.length} view{plViews.length !== 1 ? 's' : ''}</p>
+                  </div>
+                  <button
+                    onClick={e => { e.stopPropagation(); copyLink(pl.token, e.target); }}
+                    className="text-xs text-indigo-400 hover:text-indigo-300 transition-colors flex-shrink-0 px-2 py-1"
+                  >
+                    Copy link
+                  </button>
+                  <button
+                    onClick={e => { e.stopPropagation(); deletePlaylist(pl.id); }}
+                    className="text-gray-600 hover:text-red-400 text-lg leading-none transition-colors flex-shrink-0"
+                  >
+                    ×
+                  </button>
+                  <span className="text-gray-600 text-sm flex-shrink-0">{isOpen ? '↑' : '↓'}</span>
+                </div>
+                {isOpen && (
+                  <div className="border-t border-gray-800 px-4 py-3 flex flex-col gap-2">
+                    {plViews.length === 0 ? (
+                      <p className="text-xs text-gray-600 py-2">No views yet.</p>
+                    ) : plViews.map(v => (
+                      <div key={v.id} className="flex items-center justify-between text-xs">
+                        <span className="text-gray-400">{fmt(v.viewed_at)}</span>
+                        <span className="text-gray-600">{parseUA(v.user_agent)}</span>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+            );
+          })}
+        </div>
+      )}
+    </div>
+  );
+}
 export default function App({ session }) {
   const [tab, setTab] = useState('projects');
   const [view, setView] = useState('dashboard');
@@ -869,14 +1044,43 @@ const [shareLoading, setShareLoading] = useState(false);  const [audioUploading,
 const doShare = async (ids) => {
   setShareLoading(true);
   const name = proj.name;
-  const { data, error } = await supabase
+
+  const { data: pl, error } = await supabase
     .from('playlists')
     .insert({ user_id: session.user.id, name, track_ids: ids })
     .select()
     .single();
+
+  if (error) { alert('Failed to create share link: ' + error.message); setShareLoading(false); return; }
+
+  const { count } = await supabase
+    .from('pitches')
+    .select('*', { count: 'exact', head: true })
+    .eq('user_id', session.user.id);
+
+  const pitchNum = (count || 0) + 1;
+  const today = new Date().toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' });
+  const trackTitles = proj.tracks
+    .filter(t => ids.includes(t.id))
+    .map(t => t.data?.title || 'Untitled')
+    .join(', ');
+
+  await supabase.from('pitches').insert({
+    user_id: session.user.id,
+    track_title: trackTitles,
+    supervisor_name: '',
+    company: '',
+    project_name: name,
+    date_sent: new Date().toISOString().split('T')[0],
+    method: 'Email',
+    status: 'Sent',
+    notes: '',
+    playlist_token: pl.token,
+    track_id: ids[0],
+  });
+
   setShareLoading(false);
-  if (error) { alert('Failed to create share link: ' + error.message); return; }
-  const link = `${window.location.origin}/p/${data.token}`;
+  const link = `${window.location.origin}/p/${pl.token}`;
   setShareLink(link);
 };
   const signOut = () => supabase.auth.signOut();
@@ -911,10 +1115,10 @@ if(showAccount) return <AccountSettings session={session} onBack={() => setShowA
           <div className="flex items-center gap-3">
             <span className="text-sm font-bold text-white">FSM</span>
             <div className="flex gap-1">
-              {['projects','pitches'].map(t => (
+              {['projects','pitches','links'].map(t => (
                 <button key={t} onClick={() => setTab(t)}
                   className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-colors ${tab===t?'bg-gray-800 text-white':'text-gray-500 hover:text-gray-300'}`}>
-                  {t==='projects'?'Projects':'Pitches'}
+                  {t==='projects'?'Projects':t==='pitches'?'Pitches':'Links'}
                 </button>
               ))}
             </div>
@@ -952,7 +1156,8 @@ if(showAccount) return <AccountSettings session={session} onBack={() => setShowA
         </div>
       )}
 
-      {view==='dashboard' && tab==='pitches' && <PitchManager projects={projects} session={session} />}
+      {view==='dashboard' && tab==='pitches' && <PitchManager session={session} />}
+{view==='dashboard' && tab==='links' && <LinksManager session={session} />}
 
       {view==='dashboard' && tab==='projects' && (
         <div className="px-4 py-6 max-w-4xl mx-auto">

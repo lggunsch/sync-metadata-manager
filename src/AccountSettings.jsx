@@ -2,7 +2,6 @@ import { useState, useEffect } from "react";
 import { supabase } from "./supabase";
 
 const LIFETIME_PRICE_ID = import.meta.env.VITE_STRIPE_LIFETIME_PRICE_ID;
-const MONTHLY_PRICE_ID = import.meta.env.VITE_STRIPE_MONTHLY_PRICE_ID;
 
 export default function AccountSettings({ session, onBack }) {
   const [subscription, setSubscription] = useState(null);
@@ -24,7 +23,7 @@ export default function AccountSettings({ session, onBack }) {
       });
   }, [session.user.id]);
 
-  const isLifetime = subscription?.price_id === LIFETIME_PRICE_ID;
+  const isLifetime = subscription?.plan === 'lifetime';
   const planLabel = isLifetime ? 'Lifetime' : 'Monthly';
   const planColor = isLifetime ? 'text-green-400 bg-green-900/30' : 'text-indigo-400 bg-indigo-900/30';
 

@@ -168,8 +168,21 @@ await supabase.from('playlist_views').insert({
                  {d.audioUrl && (
   <div className="flex flex-col gap-2">
     <AudioPlayer url={d.audioUrl} />
-    <a href={d.audioUrl} download={(d.title || 'track') + '.mp3'} className="text-xs text-indigo-400 hover:text-indigo-300 transition-colors text-left w-fit">Download MP3</a>
-  </div>
+<button
+  onClick={async () => {
+    const res = await fetch(d.audioUrl);
+    const blob = await res.blob();
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = (d.title || 'track') + '.mp3';
+    a.click();
+    URL.revokeObjectURL(url);
+  }}
+  className="text-xs text-indigo-400 hover:text-indigo-300 transition-colors text-left w-fit"
+>
+  Download MP3
+</button>  </div>
 )}
 {/* Metadata grid */}
 <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-8 gap-y-2">

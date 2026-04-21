@@ -41,7 +41,8 @@ const newTrackData = () => ({
   aiAssisted:'No', aiNotes:'',
   masterOwners:[{name:'',role:'',pct:''}],
   pubOwners:[{name:'',role:'',pct:''}],
-  contactName:'', contactEmail:'', contactPhone:'', comments:''
+  contactName:'', contactEmail:'', contactPhone:'', comments:'',
+  audioUrl:'', audioPath:''
 });
 
 const newPitch = () => ({
@@ -92,6 +93,59 @@ function mapRow(row) {
     }
   }
   return track;
+}
+
+// ── AudioPlayer component ─────────────────────────────────────────────────────
+function AudioPlayer({ url }) {
+  const audioRef = useRef();
+  const [playing, setPlaying] = useState(false);
+  const [progress, setProgress] = useState(0);
+  const [duration, setDuration] = useState(0);
+
+  const toggle = () => {
+    if (!audioRef.current) return;
+    if (playing) { audioRef.current.pause(); setPlaying(false); }
+    else { audioRef.current.play(); setPlaying(true); }
+  };
+
+  const onTimeUpdate = () => {
+    if (!audioRef.current) return;
+    setProgress(audioRef.current.currentTime);
+  };
+
+  const onLoadedMetadata = () => {
+    if (!audioRef.current) return;
+    setDuration(audioRef.current.duration);
+  };
+
+  const onEnded = () => setPlaying(false);
+
+  const seek = (e) => {
+    if (!audioRef.current || !duration) return;
+    const rect = e.currentTarget.getBoundingClientRect();
+    const pct = (e.clientX - rect.left) / rect.width;
+    audioRef.current.currentTime = pct * duration;
+  };
+
+  const fmt = s => {
+    if (!s || isNaN(s)) return '0:00';
+    const m = Math.floor(s / 60);
+    const sec = Math.floor(s % 60);
+    return `${m}:${sec.toString().padStart(2,'0')}`;
+  };
+
+  return (
+    <div className="flex items-center gap-3 bg-gray-800/50 border border-gray-700 rounded-lg px-3 py-2">
+      <audio ref={audioRef} src={url} onTimeUpdate={onTimeUpdate} onLoadedMetadata={onLoadedMetadata} onEnded={onEnded} />
+      <button onClick={toggle} className="text-indigo-400 hover:text-indigo-300 flex-shrink-0 w-7 h-7 flex items-center justify-center">
+        {playing ? '⏸' : '▶'}
+      </button>
+      <div className="flex-1 h-1.5 bg-gray-700 rounded-full cursor-pointer" onClick={seek}>
+        <div className="h-1.5 bg-indigo-500 rounded-full transition-all" style={{width: duration ? `${(progress/duration)*100}%` : '0%'}} />
+      </div>
+      <span className="text-xs text-gray-500 flex-shrink-0 tabular-nums">{fmt(progress)} / {fmt(duration)}</span>
+    </div>
+  );
 }
 
 function buildTrackHTML(t, projectName) {
@@ -232,7 +286,6 @@ function Tags({ label, options, selected, onToggle }) {
   );
 }
 
-// ── OwnerRows must be outside App to prevent focus loss on re-render ──────────
 function OwnerRows({ field, roles, trackData, updOwner, addOwner, rmOwner }) {
   return (
     <div className="flex flex-col gap-3">
@@ -255,8 +308,9 @@ function OwnerRows({ field, roles, trackData, updOwner, addOwner, rmOwner }) {
   );
 }
 
-// ── TrackForm must be outside App to prevent focus loss on re-render ──────────
-function TrackForm({ trackData, sec, sf, tog, updOwner, addOwner, rmOwner, pct, saveTrack, setSec }) {
+function TrackForm({ trackData, sec, sf, tog, updOwner, addOwner, rmOwner, pct, saveTrack, setSec, onAudioUpload, onAudioDelete, audioUploading }) {
+  const audioFileRef = useRef();
+
   return (
     <div className="bg-gray-900 border border-gray-800 rounded-xl p-4 mb-4">
       <h3 className="text-sm font-semibold text-gray-200 mb-4">{SECTIONS[sec]}</h3>
@@ -269,7 +323,41 @@ function TrackForm({ trackData, sec, sf, tog, updOwner, addOwner, rmOwner, pct, 
           <Inp label="Track Number" value={trackData.trackNum} onChange={v=>sf('trackNum',v)} placeholder="e.g. 3" />
           <Inp label="Duration" value={trackData.duration} onChange={v=>sf('duration',v)} placeholder="e.g. 3:42" />
         </div>
+
+        {/* ── Audio Upload ── */}
+        <div className="flex flex-col gap-2">
+          <label className="text-xs text-gray-400 font-medium">Audio File (MP3)</label>
+          {trackData.audioUrl ? (
+            <div className="flex flex-col gap-2">
+              <AudioPlayer url={trackData.audioUrl} />
+              <button
+                onClick={onAudioDelete}
+                className="text-xs text-red-400 hover:text-red-300 text-left w-fit transition-colors"
+              >
+                Remove audio
+              </button>
+            </div>
+          ) : (
+            <div>
+              <input
+                ref={audioFileRef}
+                type="file"
+                accept=".mp3,audio/mpeg"
+                className="hidden"
+                onChange={e => { if(e.target.files[0]) onAudioUpload(e.target.files[0]); }}
+              />
+              <button
+                onClick={() => audioFileRef.current.click()}
+                disabled={audioUploading}
+                className="bg-gray-800 hover:bg-gray-700 disabled:opacity-50 border border-gray-700 border-dashed text-gray-400 text-xs px-4 py-3 rounded-lg w-full transition-colors"
+              >
+                {audioUploading ? 'Uploading...' : '+ Upload MP3'}
+              </button>
+            </div>
+          )}
+        </div>
       </div>}
+
       {sec === 1 && <div className="flex flex-col gap-3">
         <Inp label="ISRC" value={trackData.isrc} onChange={v=>sf('isrc',v)} placeholder="e.g. USRC12345678" />
         <Inp label="ISNI" value={trackData.isni} onChange={v=>sf('isni',v)} />
@@ -288,6 +376,7 @@ function TrackForm({ trackData, sec, sf, tog, updOwner, addOwner, rmOwner, pct, 
         </div>
         <Sel label="Bit Depth" value={trackData.bitDepth} onChange={v=>sf('bitDepth',v)} options={BIT_DEPTHS} />
       </div>}
+
       {sec === 2 && <div className="flex flex-col gap-3">
         <div className="grid grid-cols-2 gap-3">
           <Inp label="BPM" value={trackData.bpm} onChange={v=>sf('bpm',v)} placeholder="e.g. 120" />
@@ -307,6 +396,7 @@ function TrackForm({ trackData, sec, sf, tog, updOwner, addOwner, rmOwner, pct, 
           <label htmlFor="exp" className="text-sm text-gray-300 cursor-pointer">Explicit Content</label>
         </div>
       </div>}
+
       {sec === 3 && <div className="flex flex-col gap-5">
         <Tags label="Moods" options={MOODS} selected={trackData.moods} onToggle={v=>tog('moods',v)} />
         <Tags label="Instruments" options={INSTRUMENTS} selected={trackData.instruments} onToggle={v=>tog('instruments',v)} />
@@ -323,6 +413,7 @@ function TrackForm({ trackData, sec, sf, tog, updOwner, addOwner, rmOwner, pct, 
           <Slider label="Valence (Positivity)" value={trackData.valence} onChange={v=>sf('valence',v)} />
         </div>
       </div>}
+
       {sec === 4 && <div className="flex flex-col gap-5">
         <div>
           <label className="text-xs text-gray-400 font-medium block mb-3">AI Assisted</label>
@@ -336,6 +427,7 @@ function TrackForm({ trackData, sec, sf, tog, updOwner, addOwner, rmOwner, pct, 
         {trackData.aiAssisted!=='No' && <div className="flex flex-col gap-1"><label className="text-xs text-gray-400 font-medium">What was AI-assisted?</label><textarea value={trackData.aiNotes} onChange={e=>sf('aiNotes',e.target.value)} rows={3} className={`${inp} resize-none`} /></div>}
         {trackData.aiAssisted==='No' && <div className="bg-green-900/20 border border-green-800 rounded-xl p-4 text-sm text-green-400">✓ 100% human-created content</div>}
       </div>}
+
       {sec === 5 && <div className="flex flex-col gap-6">
         <div>
           <div className="flex items-center justify-between mb-3">
@@ -353,6 +445,7 @@ function TrackForm({ trackData, sec, sf, tog, updOwner, addOwner, rmOwner, pct, 
           <OwnerRows field="pubOwners" roles={PUB_ROLES} trackData={trackData} updOwner={updOwner} addOwner={addOwner} rmOwner={rmOwner} />
         </div>
       </div>}
+
       {sec === 6 && <div className="flex flex-col gap-4">
         <Inp label="Contact Name" value={trackData.contactName} onChange={v=>sf('contactName',v)} />
         <Inp label="Email" value={trackData.contactEmail} onChange={v=>sf('contactEmail',v)} type="email" />
@@ -451,7 +544,7 @@ function ImportModal({ projects, session, onClose, onImported }) {
     setImporting(false); onImported(); onClose();
   };
 
-const mappedCount = Object.values(mapping).filter(Boolean).length;
+  const mappedCount = Object.values(mapping).filter(Boolean).length;
 
   return (
     <div className="fixed inset-0 bg-black/70 flex items-center justify-center z-50 p-4">
@@ -694,6 +787,7 @@ export default function App({ session }) {
   const [sec, setSec] = useState(0);
   const [exportSel, setExportSel] = useState(new Set());
   const [printData, setPrintData] = useState(null);
+  const [audioUploading, setAudioUploading] = useState(false);
 
   useEffect(() => {
     supabase.from('projects').select('*, tracks(*)').order('created_at',{ascending:false})
@@ -709,6 +803,24 @@ export default function App({ session }) {
   const addOwner = useCallback(f => setTrackData(d=>({...d,[f]:[...d[f],{name:'',role:'',pct:''}]})), []);
   const rmOwner = useCallback((f,i) => setTrackData(d=>({...d,[f]:d[f].filter((_,j)=>j!==i)})), []);
   const pct = useCallback(arr => arr?arr.reduce((s,o)=>s+(parseFloat(o.pct)||0),0):0, []);
+
+  // ── Audio upload ──────────────────────────────────────────────────────────
+  const handleAudioUpload = async (file) => {
+    setAudioUploading(true);
+    const ext = file.name.split('.').pop().toLowerCase();
+    const path = `${session.user.id}/${Date.now()}.${ext}`;
+    const { error } = await supabase.storage.from('audio').upload(path, file, { upsert: false });
+    if (error) { alert('Upload failed: ' + error.message); setAudioUploading(false); return; }
+    const { data: urlData } = supabase.storage.from('audio').getPublicUrl(path);
+    setTrackData(d => ({ ...d, audioUrl: urlData.publicUrl, audioPath: path }));
+    setAudioUploading(false);
+  };
+
+  const handleAudioDelete = async () => {
+    if (!trackData.audioPath) return;
+    await supabase.storage.from('audio').remove([trackData.audioPath]);
+    setTrackData(d => ({ ...d, audioUrl: '', audioPath: '' }));
+  };
 
   const saveTrack = async () => {
     if(trackId){
@@ -726,6 +838,11 @@ export default function App({ session }) {
 
   const delTrack = async tid => {
     if(!window.confirm('Delete this track?'))return;
+    // delete audio from storage if it exists
+    const track = proj?.tracks.find(t=>t.id===tid);
+    if(track?.data?.audioPath) {
+      await supabase.storage.from('audio').remove([track.data.audioPath]);
+    }
     await supabase.from('tracks').delete().eq('id',tid);
     setProjects(ps=>ps.map(p=>p.id!==projId?p:{...p,tracks:p.tracks.filter(t=>t.id!==tid)}));
     setExportSel(s=>{const n=new Set(s);n.delete(tid);return n;});
@@ -894,6 +1011,7 @@ export default function App({ session }) {
                           <span className="font-medium text-gray-100 truncate">{d.title||'Untitled Track'}</span>
                           {d.explicit && <span className="text-xs bg-gray-700 text-gray-400 px-1.5 rounded">E</span>}
                           {d.aiAssisted==='Yes' && <span className="text-xs bg-red-900/50 text-red-400 px-2 py-0.5 rounded-full">AI</span>}
+                          {d.audioUrl && <span className="text-xs bg-indigo-900/50 text-indigo-400 px-2 py-0.5 rounded-full">♪</span>}
                         </div>
                         <div className="flex gap-2 mt-0.5 flex-wrap">
                           {d.bpm && <span className="text-xs text-gray-500">{d.bpm} BPM</span>}
@@ -906,6 +1024,12 @@ export default function App({ session }) {
                         <button onClick={() => delTrack(t.id)} className="text-gray-600 hover:text-red-400 text-lg leading-none transition-colors py-1">×</button>
                       </div>
                     </div>
+                    {/* ── inline player on track card if audio exists ── */}
+                    {d.audioUrl && (
+                      <div className="mt-3" onClick={e=>e.stopPropagation()}>
+                        <AudioPlayer url={d.audioUrl} />
+                      </div>
+                    )}
                   </div>
                 );
               })}
@@ -940,6 +1064,9 @@ export default function App({ session }) {
             pct={pct}
             saveTrack={saveTrack}
             setSec={setSec}
+            onAudioUpload={handleAudioUpload}
+            onAudioDelete={handleAudioDelete}
+            audioUploading={audioUploading}
           />
           <div className="fixed bottom-0 left-0 right-0 bg-gray-950 border-t border-gray-800 px-4 py-3 flex items-center justify-between gap-2">
             <button onClick={() => setSec(s=>Math.max(0,s-1))} disabled={sec===0}

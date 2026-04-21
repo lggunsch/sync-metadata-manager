@@ -80,7 +80,11 @@ export default function PublicPlaylist({ token }) {
 
       if (plErr || !pl) { setError('This link is invalid or has been removed.'); setLoading(false); return; }
       setPlaylist(pl);
-
+await supabase.from('playlist_views').insert({
+  playlist_id: pl.id,
+  token: token,
+  user_agent: navigator.userAgent
+});
       if (!pl.track_ids || pl.track_ids.length === 0) { setTracks([]); setLoading(false); return; }
 
       const { data: trackData, error: trackErr } = await supabase

@@ -60,7 +60,20 @@ export default function AccountSettings({ session, onBack }) {
     }
     setUpgradeLoading(false);
   };
-
+const openBillingPortal = async () => {
+  try {
+    const res = await fetch('/api/create-portal-session', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ userId: session.user.id }),
+    });
+    const { url, error } = await res.json();
+    if (error) throw new Error(error);
+    window.location.href = url;
+  } catch {
+    alert('Could not open billing portal. Please try again.');
+  }
+};
   const signOut = () => supabase.auth.signOut();
 
   const inp = "bg-gray-800 border border-gray-700 rounded-lg px-3 py-2 text-sm text-gray-100 placeholder-gray-600 focus:outline-none focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 w-full";
@@ -85,39 +98,47 @@ export default function AccountSettings({ session, onBack }) {
         </div>
 
         {/* Plan status */}
-        <div className="bg-gray-900 border border-gray-800 rounded-xl p-4 flex flex-col gap-4">
-          <p className="text-xs text-gray-500 font-medium uppercase tracking-wider">Plan</p>
-          {loadingSub ? (
-            <p className="text-xs text-gray-600">Loading...</p>
-          ) : (
-            <>
-              <div className="flex items-center justify-between">
-                <p className="text-sm text-gray-200">Current plan</p>
-                <span className={`text-xs font-semibold px-3 py-1 rounded-full ${planColor}`}>
-                  {planLabel}
-                </span>
-              </div>
-              {!isLifetime && (
-                <div className="border-t border-gray-800 pt-4 flex flex-col gap-3">
-                  <div>
-                    <p className="text-sm font-medium text-white">Upgrade to Lifetime</p>
-                    <p className="text-xs text-gray-500 mt-1">One payment of $99. Never pay again. All future updates included.</p>
-                  </div>
-                  <button
-                    onClick={upgradeToLifetime}
-                    disabled={upgradeLoading}
-                    className="bg-indigo-600 hover:bg-indigo-500 disabled:opacity-50 text-white py-2.5 rounded-lg text-sm font-semibold transition-colors"
-                  >
-                    {upgradeLoading ? 'Loading...' : 'Upgrade to Lifetime — $99'}
-                  </button>
-                </div>
-              )}
-              {isLifetime && (
-                <p className="text-xs text-gray-500">You have lifetime access. All future updates are included.</p>
-              )}
-            </>
+<div className="bg-gray-900 border border-gray-800 rounded-xl p-4 flex flex-col gap-4">
+  <p className="text-xs text-gray-500 font-medium uppercase tracking-wider">Plan</p>
+  {loadingSub ? (
+    <p className="text-xs text-gray-600">Loading...</p>
+  ) : (
+    <>
+      <div className="flex items-center justify-between">
+        <p className="text-sm text-gray-200">Current plan</p>
+        <span className={`text-xs font-semibold px-3 py-1 rounded-full ${planColor}`}>
+          {planLabel}
+        </span>
+      </div>
+      {!isLifetime && (
+        <div className="border-t border-gray-800 pt-4 flex flex-col gap-3">
+          <div>
+            <p className="text-sm font-medium text-white">Upgrade to Lifetime</p>
+            <p className="text-xs text-gray-500 mt-1">One payment of $99. Never pay again. All future updates included.</p>
+          </div>
+          <button
+            onClick={upgradeToLifetime}
+            disabled={upgradeLoading}
+            className="bg-indigo-600 hover:bg-indigo-500 disabled:opacity-50 text-white py-2.5 rounded-lg text-sm font-semibold transition-colors"
+          >
+            {upgradeLoading ? 'Loading...' : 'Upgrade to Lifetime — $99'}
+          </button>
+          {subscription?.stripe_customer_id !== 'manual' && (
+            <button
+              onClick={openBillingPortal}
+              className="text-xs text-gray-500 hover:text-red-400 transition-colors text-left"
+            >
+              Cancel subscription
+            </button>
           )}
         </div>
+      )}
+      {isLifetime && (
+        <p className="text-xs text-gray-500">You have lifetime access. All future updates are included.</p>
+      )}
+    </>
+  )}
+</div>
 
         {/* Change password */}
         <div className="bg-gray-900 border border-gray-800 rounded-xl p-4 flex flex-col gap-4">

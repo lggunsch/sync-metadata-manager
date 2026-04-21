@@ -1000,7 +1000,7 @@ const [shareLoading, setShareLoading] = useState(false);  const [audioUploading,
     <button onClick={() => doExport([...exportSel])} className="bg-emerald-600 hover:bg-emerald-500 text-white px-3 py-2 rounded-lg text-xs font-semibold transition-colors whitespace-nowrap">
       PDF ({exportSel.size})
     </button>
-    <button onClick={() => doShare([...exportSel])} className="bg-indigo-600 hover:bg-indigo-500 text-white px-3 py-2 rounded-lg text-xs font-semibold transition-colors whitespace-nowrap">
+    <button onClick={() => { console.log('share clicked', [...exportSel]); doShare([...exportSel]); }} className="bg-indigo-600 hover:bg-indigo-500 text-white px-3 py-2 rounded-lg text-xs font-semibold transition-colors whitespace-nowrap">
       Share ({exportSel.size})
     </button>
   </div>

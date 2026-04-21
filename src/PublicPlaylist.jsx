@@ -167,16 +167,9 @@ await supabase.from('playlist_views').insert({
                   {/* Audio player */}
                  {d.audioUrl && (
   <div className="flex flex-col gap-2">
-    <AudioPlayer url={d.audioUrl} />
-    
-      href={d.audioUrl}
-      download={(d.title || 'track') + '.mp3'}
-      className="text-xs text-indigo-400 hover:text-indigo-300 transition-colors text-left w-fit"
-    >
-      Download MP3
-    </a>
-  </div>
-)}
+<AudioPlayer url={d.audioUrl} />
+<a href={d.audioUrl} download={(d.title || 'track') + '.mp3'} className="text-xs text-indigo-400 hover:text-indigo-300 transition-colors text-left w-fit">Download MP3</a>
+</div>
 
                   {/* Metadata grid */}
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-8 gap-y-2">

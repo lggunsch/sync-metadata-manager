@@ -873,13 +873,14 @@ function LinksManager({ session }) {
     return d.toLocaleDateString('en-US', { month: 'short', day: 'numeric' }) + ' at ' + d.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' });
   };
 
-  const copyLink = (token, btnEl) => {
-    navigator.clipboard.writeText(`${window.location.origin}/p/${token}`).then(() => {
-      const orig = btnEl.textContent;
-      btnEl.textContent = 'Copied';
-      setTimeout(() => btnEl.textContent = orig, 1500);
-    });
-  };
+  const copyLink = (token, btn) => {
+  navigator.clipboard.writeText(`${window.location.origin}/p/${token}`).then(() => {
+    const el = btn.closest('button') || btn;
+    const orig = el.textContent;
+    el.textContent = 'Copied';
+    setTimeout(() => el.textContent = orig, 1500);
+  });
+};
 
   const deletePlaylist = async (id) => {
     if (!window.confirm('Delete this shared link?')) return;

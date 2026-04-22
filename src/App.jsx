@@ -967,7 +967,7 @@ export default function App({ session }) {
 const [printData, setPrintData] = useState(null);
 const [shareLink, setShareLink] = useState(null);
 const [shareLoading, setShareLoading] = useState(false);  const [audioUploading, setAudioUploading] = useState(false);
-
+const [sharePrompt, setSharePrompt] = useState(null);
   useEffect(() => {
     supabase.from('projects').select('*, tracks(*)').order('created_at',{ascending:false})
       .then(({data}) => {if(data)setProjects(data.map(p=>({...p,tracks:p.tracks||[]})));setLoaded(true);});
@@ -1042,9 +1042,10 @@ const [shareLoading, setShareLoading] = useState(false);  const [audioUploading,
 
   const togExport = tid => setExportSel(s=>{const n=new Set(s);n.has(tid)?n.delete(tid):n.add(tid);return n;});
   const doExport = ids => {const ts=proj.tracks.filter(t=>ids.includes(t.id));if(ts.length)setPrintData({tracks:ts,projectName:proj.name});};
-const doShare = async (ids) => {
+const doShare = async (ids, playlistName) => {
   setShareLoading(true);
-  const name = proj.name;
+  const name = playlistName || proj.name;
+  // rest stays the same
 
   const { data: pl, error } = await supabase
     .from('playlists')
@@ -1114,6 +1115,35 @@ if(showAccount) return <AccountSettings session={session} onBack={() => setShowA
 }} className="bg-indigo-600 hover:bg-indigo-500 text-white px-4 py-2.5 rounded-lg text-sm font-semibold transition-colors">
   Copy Link
 </button>
+    </div>
+  </div>
+)}
+{sharePrompt && (
+  <div className="fixed inset-0 bg-black/70 flex items-center justify-center z-50 p-4">
+    <div className="bg-gray-900 border border-gray-700 rounded-xl w-full max-w-md p-5 flex flex-col gap-4">
+      <div className="flex items-center justify-between">
+        <h2 className="text-sm font-semibold text-gray-100">Name this playlist</h2>
+        <button onClick={() => setSharePrompt(null)} className="text-gray-600 hover:text-gray-300 text-xl">×</button>
+      </div>
+      <p className="text-xs text-gray-400">Give this playlist a name so you can identify it later in your Links tab.</p>
+      <input
+        type="text"
+        autoFocus
+        defaultValue={proj?.name}
+        id="playlist-name-input"
+        placeholder="e.g. Dark Cinematic Tracks — Netflix Pitch"
+        className={inp}
+      />
+      <button
+        onClick={() => {
+          const name = document.getElementById('playlist-name-input').value.trim() || proj?.name;
+          setSharePrompt(null);
+          doShare(sharePrompt, name);
+        }}
+        className="bg-indigo-600 hover:bg-indigo-500 text-white px-4 py-2.5 rounded-lg text-sm font-semibold transition-colors"
+      >
+        Generate Link
+      </button>
     </div>
   </div>
 )}
@@ -1232,8 +1262,9 @@ if(showAccount) return <AccountSettings session={session} onBack={() => setShowA
     <button onClick={() => doExport([...exportSel])} className="bg-emerald-600 hover:bg-emerald-500 text-white px-3 py-2 rounded-lg text-xs font-semibold transition-colors whitespace-nowrap">
       PDF ({exportSel.size})
     </button>
-<button onClick={() => doShare([...exportSel])} className="bg-indigo-600 hover:bg-indigo-500 text-white px-3 py-2 rounded-lg text-xs font-semibold transition-colors whitespace-nowrap">      Share ({exportSel.size})
-    </button>
+<button onClick={() => setSharePrompt([...exportSel])} className="bg-indigo-600 hover:bg-indigo-500 text-white px-3 py-2 rounded-lg text-xs font-semibold transition-colors whitespace-nowrap">
+  Share ({exportSel.size})
+</button>
   </div>
 )}
           </div>

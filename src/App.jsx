@@ -1105,9 +1105,15 @@ if(showAccount) return <AccountSettings session={session} onBack={() => setShowA
       </div>
       <p className="text-xs text-gray-400">Anyone with this link can view the playlist and metadata. No login required.</p>
       <div className="bg-gray-800 border border-gray-700 rounded-lg px-3 py-2 text-xs text-indigo-400 break-all">{shareLink}</div>
-      <button onClick={() => navigator.clipboard.writeText(shareLink)} className="bg-indigo-600 hover:bg-indigo-500 text-white px-4 py-2.5 rounded-lg text-sm font-semibold transition-colors">
-        Copy Link
-      </button>
+      <button onClick={e => {
+  navigator.clipboard.writeText(shareLink).then(() => {
+    const orig = e.target.textContent;
+    e.target.textContent = 'Copied!';
+    setTimeout(() => e.target.textContent = orig, 1500);
+  });
+}} className="bg-indigo-600 hover:bg-indigo-500 text-white px-4 py-2.5 rounded-lg text-sm font-semibold transition-colors">
+  Copy Link
+</button>
     </div>
   </div>
 )}

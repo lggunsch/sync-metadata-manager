@@ -911,7 +911,7 @@ function LinksManager({ session }) {
                   onClick={() => setExpanded(isOpen ? null : pl.id)}>
                   <div className="flex-1 min-w-0">
                     <p className="font-medium text-gray-100 text-sm truncate">{pl.name}</p>
-                    <p className="text-xs text-gray-500 mt-0.5">{pl.track_ids.length} track{pl.track_ids.length !== 1 ? 's' : ''} · {plViews.length} view{plViews.length !== 1 ? 's' : ''}</p>
+                    <p className="text-xs text-gray-500 mt-0.5">{pl.track_ids.length} track{pl.track_ids.length !== 1 ? 's' : ''} · {plViews.length} view{plViews.length !== 1 ? 's' : ''} · {new Date(pl.created_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}</p><p className="text-xs text-gray-500 mt-0.5">{pl.track_ids.length} track{pl.track_ids.length !== 1 ? 's' : ''} · {plViews.length} view{plViews.length !== 1 ? 's' : ''}</p>
                   </div>
                  <button
   onClick={e => { e.stopPropagation(); copyLink(pl.token, e.target); }}

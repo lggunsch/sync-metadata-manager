@@ -343,7 +343,7 @@ function TrackForm({ trackData, sec, sf, tog, updOwner, addOwner, rmOwner, pct, 
               <input
                 ref={audioFileRef}
                 type="file"
-                accept=".mp3,audio/mpeg"
+                accept=".mp3,.wav,.aiff,.aif,audio/mpeg,audio/wav,audio/aiff"
                 className="hidden"
                 onChange={e => { if(e.target.files[0]) onAudioUpload(e.target.files[0]); }}
               />

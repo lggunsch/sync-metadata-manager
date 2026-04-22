@@ -913,12 +913,12 @@ function LinksManager({ session }) {
                     <p className="font-medium text-gray-100 text-sm truncate">{pl.name}</p>
                     <p className="text-xs text-gray-500 mt-0.5">{pl.track_ids.length} track{pl.track_ids.length !== 1 ? 's' : ''} · {plViews.length} view{plViews.length !== 1 ? 's' : ''}</p>
                   </div>
-                  <button
-                    onClick={e => { e.stopPropagation(); copyLink(pl.token, e.target); }}
-                    className="text-xs text-indigo-400 hover:text-indigo-300 transition-colors flex-shrink-0 px-2 py-1"
-                  >
-                    Copy link
-                  </button>
+                 <button
+  onClick={e => { e.stopPropagation(); copyLink(pl.token, e.target); }}
+  className="text-xs text-indigo-400 hover:text-indigo-300 transition-colors flex-shrink-0 px-2 py-1 border border-indigo-800 rounded-lg"
+>
+  Copy link
+</button>
                   <button
                     onClick={e => { e.stopPropagation(); deletePlaylist(pl.id); }}
                     className="text-gray-600 hover:text-red-400 text-lg leading-none transition-colors flex-shrink-0"

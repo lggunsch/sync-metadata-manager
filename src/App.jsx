@@ -1068,7 +1068,7 @@ const doShare = async (ids) => {
   await supabase.from('pitches').insert({
     user_id: session.user.id,
     track_title: trackTitles,
-    supervisor_name: '',
+    supervisor_name: `${name} — ${new Date().toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}`,
     company: '',
     project_name: name,
     date_sent: new Date().toISOString().split('T')[0],

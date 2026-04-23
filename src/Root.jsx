@@ -21,14 +21,7 @@ export default function Root() {
   if (pathParts[1] === 'p' && pathParts[2]) {
     return <PublicPlaylist token={pathParts[2]} />;
   }
-if (pathParts[1] === 'admin') {
-  if (loading) return <div className="flex items-center justify-center h-screen bg-gray-950 text-gray-400">Loading...</div>;
-  if (!session) return <Auth />;
-  if (session.user.id !== import.meta.env.VITE_ADMIN_USER_ID) {
-    return <div className="flex items-center justify-center h-screen bg-gray-950 text-gray-400">Not authorized.</div>;
-  }
-  return <AdminPanel session={session} />;
-}
+
   useEffect(() => {
     supabase.auth.getSession().then(({ data: { session } }) => {
       setSession(session);
@@ -81,7 +74,14 @@ if (pathParts[1] === 'admin') {
     setRole(roleData?.role || 'artist');
     setLoading(false);
   };
-
+if (pathParts[1] === 'admin') {
+  if (loading) return <div className="flex items-center justify-center h-screen bg-gray-950 text-gray-400">Loading...</div>;
+  if (!session) return <Auth />;
+  if (session.user.id !== import.meta.env.VITE_ADMIN_USER_ID) {
+    return <div className="flex items-center justify-center h-screen bg-gray-950 text-gray-400">Not authorized.</div>;
+  }
+  return <AdminPanel session={session} />;
+}
   if (isRecovery) return <ResetPassword />;
   if (loading) return (
     <div className="flex items-center justify-center h-screen bg-gray-950 text-gray-400">

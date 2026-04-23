@@ -731,17 +731,26 @@ function PitchManager({ session }) {
         <div className="bg-gray-900 border border-gray-700 rounded-xl p-4 mb-4">
           <h3 className="text-sm font-semibold text-gray-200 mb-4">{editing?'Edit Pitch':'Log New Pitch'}</h3>
           <div className="flex flex-col gap-3">
-            <div className="flex flex-col gap-1">
-              <label className="text-xs text-gray-400 font-medium">Track</label>
-              <select value={form.track_id} onChange={e => {
-                const t=allTracks.find(t=>t.id===e.target.value);
-                sf('track_id',e.target.value);
-                if(t)sf('track_title',`${t.title} (${t.project})`);
-              }} className={inp}>
-                <option value="">Select a track...</option>
-                {allTracks.map(t=><option key={t.id} value={t.id}>{t.title} — {t.project}</option>)}
-              </select>
-            </div>
+            {form.brief_id ? (
+  <div className="flex flex-col gap-1">
+    <label className="text-xs text-gray-400 font-medium">Track</label>
+    <div className="bg-gray-800/50 border border-gray-700 rounded-lg px-3 py-2 text-sm text-gray-400">
+      {form.track_title || 'Brief submission'} <span className="text-gray-600 text-xs ml-1">(cannot be changed)</span>
+    </div>
+  </div>
+) : (
+  <div className="flex flex-col gap-1">
+    <label className="text-xs text-gray-400 font-medium">Track</label>
+    <select value={form.track_id} onChange={e => {
+      const t=allTracks.find(t=>t.id===e.target.value);
+      sf('track_id',e.target.value);
+      if(t)sf('track_title',`${t.title} (${t.project})`);
+    }} className={inp}>
+      <option value="">Select a track...</option>
+      {allTracks.map(t=><option key={t.id} value={t.id}>{t.title} — {t.project}</option>)}
+    </select>
+  </div>
+)}
             <Inp label="Supervisor Name" value={form.supervisor_name} onChange={v=>sf('supervisor_name',v)} placeholder="e.g. Jane Smith" />
             <Inp label="Company / Network" value={form.company} onChange={v=>sf('company',v)} placeholder="e.g. Netflix, NBC" />
             <Inp label="Project / Show / Film" value={form.project_name} onChange={v=>sf('project_name',v)} placeholder="e.g. Stranger Things S5" />

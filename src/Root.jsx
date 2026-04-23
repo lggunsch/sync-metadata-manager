@@ -6,6 +6,7 @@ import Paywall from "./Paywall";
 import ResetPassword from "./ResetPassword";
 import PublicPlaylist from "./PublicPlaylist";
 import SupervisorApp from "./SupervisorApp";
+import AdminPanel from "./AdminPanel";
 
 export default function Root() {
   const [session, setSession] = useState(null);
@@ -20,7 +21,13 @@ export default function Root() {
   if (pathParts[1] === 'p' && pathParts[2]) {
     return <PublicPlaylist token={pathParts[2]} />;
   }
-
+if (pathParts[1] === 'admin') {
+  if (!session) return <Auth />;
+  if (session.user.id !== import.meta.env.VITE_ADMIN_USER_ID) {
+    return <div className="flex items-center justify-center h-screen bg-gray-950 text-gray-400">Not authorized.</div>;
+  }
+  return <AdminPanel session={session} />;
+}
   useEffect(() => {
     supabase.auth.getSession().then(({ data: { session } }) => {
       setSession(session);

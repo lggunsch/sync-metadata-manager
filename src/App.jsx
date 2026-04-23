@@ -948,6 +948,276 @@ function LinksManager({ session }) {
     </div>
   );
 }
+function BriefBoard({ session, projects }) {
+  const [briefs, setBriefs] = useState([]);
+  const [loaded, setLoaded] = useState(false);
+  const [filters, setFilters] = useState({ genre: '', mood: '', project_type: '', bpm_min: '', bpm_max: '' });
+  const [submitting, setSubmitting] = useState(null);
+  const [submissions, setSubmissions] = useState(new Set());
+  const [submitFlow, setSubmitFlow] = useState(null);
+  const [selectedTracks, setSelectedTracks] = useState([]);
+  const [playlistName, setPlaylistName] = useState('');
+  const [submitStep, setSubmitStep] = useState('project');
+  const [selectedProject, setSelectedProject] = useState(null);
+
+  useEffect(() => {
+    const load = async () => {
+      const { data } = await supabase
+        .from('briefs')
+        .select('*')
+        .gt('deadline', new Date().toISOString())
+        .order('created_at', { ascending: false });
+      if (data) setBriefs(data);
+
+      const { data: mySubs } = await supabase
+        .from('brief_submissions')
+        .select('brief_id')
+        .eq('artist_id', session.user.id);
+      if (mySubs) setSubmissions(new Set(mySubs.map(s => s.brief_id)));
+
+      setLoaded(true);
+    };
+    load();
+  }, [session.user.id]);
+
+  const filtered = briefs.filter(b => {
+    if (filters.genre && !b.genre?.toLowerCase().includes(filters.genre.toLowerCase())) return false;
+    if (filters.mood && b.mood !== filters.mood) return false;
+    if (filters.project_type && b.project_type !== filters.project_type) return false;
+    if (filters.bpm_min && b.bpm_max && parseInt(b.bpm_max) < parseInt(filters.bpm_min)) return false;
+    if (filters.bpm_max && b.bpm_min && parseInt(b.bpm_min) > parseInt(filters.bpm_max)) return false;
+    return true;
+  });
+
+  const openSubmit = (brief) => {
+    setSubmitFlow(brief);
+    setSubmitStep('project');
+    setSelectedProject(null);
+    setSelectedTracks([]);
+    setPlaylistName(brief.title);
+  };
+
+  const toggleTrack = (trackId) => {
+    setSelectedTracks(prev => {
+      if (prev.includes(trackId)) return prev.filter(id => id !== trackId);
+      if (prev.length >= 3) return prev;
+      return [...prev, trackId];
+    });
+  };
+
+  const submitToBrief = async () => {
+    if (!playlistName.trim()) return alert('Please name your playlist.');
+    if (selectedTracks.length === 0) return alert('Please select at least one track.');
+    setSubmitting(submitFlow.id);
+
+    const { data: pl, error: plErr } = await supabase
+      .from('playlists')
+      .insert({
+        user_id: session.user.id,
+        name: playlistName.trim(),
+        track_ids: selectedTracks,
+      })
+      .select()
+      .single();
+
+    if (plErr) { alert('Failed to create playlist: ' + plErr.message); setSubmitting(null); return; }
+
+    const { error: subErr } = await supabase
+      .from('brief_submissions')
+      .insert({
+        brief_id: submitFlow.id,
+        artist_id: session.user.id,
+        playlist_id: pl.id,
+        playlist_name: playlistName.trim(),
+      });
+
+    if (subErr) { alert('Failed to submit: ' + subErr.message); setSubmitting(null); return; }
+
+    const trackTitles = selectedProject.tracks
+      .filter(t => selectedTracks.includes(t.id))
+      .map(t => t.data?.title || 'Untitled')
+      .join(', ');
+
+    await supabase.from('pitches').insert({
+      user_id: session.user.id,
+      track_id: selectedTracks[0],
+      track_title: trackTitles,
+      supervisor_name: `Brief: ${submitFlow.title}`,
+      project_name: selectedProject.name,
+      date_sent: new Date().toISOString().split('T')[0],
+      method: 'Submission Portal',
+      status: 'Sent',
+      notes: '',
+      playlist_token: pl.token,
+      brief_id: submitFlow.id,
+      brief_title: submitFlow.title,
+    });
+
+    setSubmissions(s => new Set([...s, submitFlow.id]));
+    setSubmitting(null);
+    setSubmitFlow(null);
+  };
+
+  const fmt = ts => new Date(ts).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
+  const PROJECT_TYPES = ['Commercial', 'Film', 'TV', 'Game', 'Other'];
+  const MOODS = ['Dark','Uplifting','Melancholic','Intense','Calm','Dreamy','Aggressive','Romantic','Nostalgic','Mysterious','Triumphant','Tense','Playful','Epic','Intimate','Cinematic','Ethereal','Gritty','Anthemic','Hopeful'];
+
+  return (
+    <div className="px-4 py-6 max-w-4xl mx-auto">
+      <div className="mb-5">
+        <h1 className="text-xl font-bold text-white">Brief Board</h1>
+        <p className="text-gray-500 text-xs mt-0.5">Active briefs from music supervisors</p>
+      </div>
+
+      {/* Filters */}
+      <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 mb-5">
+        <input value={filters.genre} onChange={e => setFilters(f => ({ ...f, genre: e.target.value }))}
+          placeholder="Genre" className={inp} />
+        <select value={filters.mood} onChange={e => setFilters(f => ({ ...f, mood: e.target.value }))} className={inp}>
+          <option value="">All moods</option>
+          {MOODS.map(m => <option key={m} value={m}>{m}</option>)}
+        </select>
+        <select value={filters.project_type} onChange={e => setFilters(f => ({ ...f, project_type: e.target.value }))} className={inp}>
+          <option value="">All types</option>
+          {PROJECT_TYPES.map(t => <option key={t} value={t}>{t}</option>)}
+        </select>
+        <div className="flex gap-1">
+          <input type="number" value={filters.bpm_min} onChange={e => setFilters(f => ({ ...f, bpm_min: e.target.value }))}
+            placeholder="BPM min" className={inp} />
+          <input type="number" value={filters.bpm_max} onChange={e => setFilters(f => ({ ...f, bpm_max: e.target.value }))}
+            placeholder="BPM max" className={inp} />
+        </div>
+      </div>
+
+      {!loaded ? (
+        <div className="text-center py-16 text-gray-600 text-sm">Loading briefs...</div>
+      ) : filtered.length === 0 ? (
+        <div className="text-center py-16 text-gray-600">
+          <div className="text-3xl mb-2">📋</div>
+          <p className="text-sm">{briefs.length === 0 ? 'No active briefs right now.' : 'No briefs match your filters.'}</p>
+        </div>
+      ) : (
+        <div className="flex flex-col gap-3">
+          {filtered.map(b => {
+            const submitted = submissions.has(b.id);
+            return (
+              <div key={b.id} className="bg-gray-900 border border-gray-800 rounded-xl p-4">
+                <div className="flex items-start justify-between gap-3">
+                  <div className="flex-1 min-w-0">
+                    <p className="font-medium text-gray-100">{b.title}</p>
+                    <div className="flex gap-2 mt-1.5 flex-wrap">
+                      {b.genre && <span className="text-xs bg-gray-800 text-gray-300 px-2 py-0.5 rounded-full">{b.genre}</span>}
+                      {b.mood && <span className="text-xs bg-gray-800 text-gray-300 px-2 py-0.5 rounded-full">{b.mood}</span>}
+                      {b.project_type && <span className="text-xs bg-gray-800 text-gray-300 px-2 py-0.5 rounded-full">{b.project_type}</span>}
+                      {(b.bpm_min || b.bpm_max) && (
+                        <span className="text-xs bg-gray-800 text-gray-300 px-2 py-0.5 rounded-full">
+                          {b.bpm_min || '?'}–{b.bpm_max || '?'} BPM
+                        </span>
+                      )}
+                    </div>
+                    {b.deadline && <p className="text-xs text-gray-600 mt-1.5">Deadline: {fmt(b.deadline)}</p>}
+                  </div>
+                  <div className="flex-shrink-0">
+                    {submitted ? (
+                      <span className="text-xs bg-green-900/40 text-green-400 px-3 py-1.5 rounded-lg font-medium">Submitted</span>
+                    ) : (
+                      <button
+                        onClick={() => openSubmit(b)}
+                        className="text-xs bg-indigo-600 hover:bg-indigo-500 text-white px-3 py-1.5 rounded-lg font-medium transition-colors"
+                      >
+                        Submit
+                      </button>
+                    )}
+                  </div>
+                </div>
+              </div>
+            );
+          })}
+        </div>
+      )}
+
+      {/* Submission modal */}
+      {submitFlow && (
+        <div className="fixed inset-0 bg-black/70 flex items-center justify-center z-50 p-4">
+          <div className="bg-gray-900 border border-gray-700 rounded-xl w-full max-w-lg max-h-[85vh] flex flex-col">
+            <div className="flex items-center justify-between p-4 border-b border-gray-800">
+              <div>
+                <h2 className="text-sm font-semibold text-gray-100">Submit to Brief</h2>
+                <p className="text-xs text-gray-500 mt-0.5">{submitFlow.title}</p>
+              </div>
+              <button onClick={() => setSubmitFlow(null)} className="text-gray-600 hover:text-gray-300 text-xl">×</button>
+            </div>
+            <div className="p-4 flex flex-col gap-4 overflow-y-auto flex-1">
+
+              {submitStep === 'project' && (
+                <>
+                  <p className="text-xs text-gray-400">Select a project to submit from:</p>
+                  <div className="flex flex-col gap-2">
+                    {projects.map(p => (
+                      <div key={p.id}
+                        className="bg-gray-800 border border-gray-700 rounded-lg p-3 cursor-pointer hover:border-indigo-500 transition-colors"
+                        onClick={() => { setSelectedProject(p); setSubmitStep('tracks'); }}>
+                        <p className="text-sm font-medium text-gray-100">{p.name}</p>
+                        <p className="text-xs text-gray-500 mt-0.5">{p.tracks?.length || 0} tracks</p>
+                      </div>
+                    ))}
+                  </div>
+                </>
+              )}
+
+              {submitStep === 'tracks' && selectedProject && (
+                <>
+                  <p className="text-xs text-gray-400">Select up to 3 tracks from <span className="text-gray-200">{selectedProject.name}</span>:</p>
+                  <div className="flex flex-col gap-2">
+                    {selectedProject.tracks?.map(t => {
+                      const d = t.data || {};
+                      const selected = selectedTracks.includes(t.id);
+                      const disabled = !selected && selectedTracks.length >= 3;
+                      return (
+                        <div key={t.id}
+                          onClick={() => !disabled && toggleTrack(t.id)}
+                          className={`bg-gray-800 border rounded-lg p-3 cursor-pointer transition-colors ${selected ? 'border-indigo-500 bg-indigo-900/20' : disabled ? 'border-gray-700 opacity-40 cursor-not-allowed' : 'border-gray-700 hover:border-gray-500'}`}>
+                          <p className="text-sm font-medium text-gray-100">{d.title || 'Untitled'}</p>
+                          <p className="text-xs text-gray-500 mt-0.5">{[d.bpm && `${d.bpm} BPM`, d.key, d.genre].filter(Boolean).join(' · ')}</p>
+                        </div>
+                      );
+                    })}
+                  </div>
+                  <button onClick={() => setSubmitStep('name')} disabled={selectedTracks.length === 0}
+                    className="bg-indigo-600 hover:bg-indigo-500 disabled:opacity-50 text-white py-2.5 rounded-lg text-sm font-semibold transition-colors">
+                    Next — Name Your Playlist
+                  </button>
+                </>
+              )}
+
+              {submitStep === 'name' && (
+                <>
+                  <p className="text-xs text-gray-400">Give your submission a name:</p>
+                  <input
+                    value={playlistName}
+                    onChange={e => setPlaylistName(e.target.value)}
+                    placeholder="e.g. Dark Cinematic Tracks"
+                    className={inp}
+                    autoFocus
+                  />
+                  <p className="text-xs text-gray-600">{selectedTracks.length} track{selectedTracks.length !== 1 ? 's' : ''} selected</p>
+                  <button onClick={submitToBrief} disabled={!!submitting}
+                    className="bg-indigo-600 hover:bg-indigo-500 disabled:opacity-50 text-white py-2.5 rounded-lg text-sm font-semibold transition-colors">
+                    {submitting ? 'Submitting...' : 'Submit to Brief'}
+                  </button>
+                  <button onClick={() => setSubmitStep('tracks')} className="text-xs text-gray-500 hover:text-gray-300 text-center transition-colors">
+                    ← Back
+                  </button>
+                </>
+              )}
+
+            </div>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
 export default function App({ session }) {
   const [tab, setTab] = useState('projects');
   const [view, setView] = useState('dashboard');
@@ -1152,11 +1422,9 @@ if(showAccount) return <AccountSettings session={session} onBack={() => setShowA
           <div className="flex items-center gap-3">
             <span className="text-sm font-bold text-white">FSM</span>
             <div className="flex gap-1">
-              {['projects','pitches','links'].map(t => (
-                <button key={t} onClick={() => setTab(t)}
+{['projects','pitches','links','briefs'].map(t => (                <button key={t} onClick={() => setTab(t)}
                   className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-colors ${tab===t?'bg-gray-800 text-white':'text-gray-500 hover:text-gray-300'}`}>
-                  {t==='projects'?'Projects':t==='pitches'?'Pitches':'Links'}
-                </button>
+{t==='projects'?'Projects':t==='pitches'?'Pitches':t==='links'?'Links':'Briefs'}                </button>
               ))}
             </div>
           </div>
@@ -1195,7 +1463,7 @@ if(showAccount) return <AccountSettings session={session} onBack={() => setShowA
 
       {view==='dashboard' && tab==='pitches' && <PitchManager session={session} />}
 {view==='dashboard' && tab==='links' && <LinksManager session={session} />}
-
+{view==='dashboard' && tab==='briefs' && <BriefBoard session={session} projects={projects} />}
       {view==='dashboard' && tab==='projects' && (
         <div className="px-4 py-6 max-w-4xl mx-auto">
           {showAddProj && (

@@ -27,17 +27,23 @@ export default function Root() {
       else setLoading(false);
     });
     const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
-      if (event === 'PASSWORD_RECOVERY') {
-        setIsRecovery(true);
-        setLoading(false);
-        return;
-      }
-      setSession(session);
-      if (session) checkAccess(session.user.id);
-      else { setHasAccess(false); setLoading(false); }
-    });
-    return () => subscription.unsubscribe();
-  }, []);
+  if (event === 'PASSWORD_RECOVERY') {
+    setIsRecovery(true);
+    setLoading(false);
+    return;
+  }
+  setSession(session);
+  if (session) {
+    setLoading(true);
+    checkAccess(session.user.id);
+  } else { 
+    setHasAccess(false); 
+    setLoading(false); 
+  }
+});
+
+return () => subscription.unsubscribe();
+}, []);
 
   const checkAccess = async (userId) => {
     const params = new URLSearchParams(window.location.search);

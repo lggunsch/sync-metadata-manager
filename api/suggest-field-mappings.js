@@ -53,8 +53,9 @@ Return ONLY a valid JSON object mapping each column header to the best FSM field
       }]
     });
 
-    const text = message.content[0].text.trim();
-    const mapping = JSON.parse(text);
+    let text = message.content[0].text.trim();
+text = text.replace(/^```json\s*/i, '').replace(/```\s*$/i, '').trim();
+const mapping = JSON.parse(text);
     res.status(200).json({ mapping });
   } catch (err) {
     console.error('Mapping error:', err.message);

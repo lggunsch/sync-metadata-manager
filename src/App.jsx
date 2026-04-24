@@ -429,23 +429,13 @@ function TrackForm({ trackData, sec, sf, tog, updOwner, addOwner, rmOwner, pct, 
         {trackData.aiAssisted==='No' && <div className="bg-green-900/20 border border-green-800 rounded-xl p-4 text-sm text-green-400">✓ 100% human-created content</div>}
       </div>}
 
-      {sec === 5 && <div className="flex flex-col gap-6">
-        <div>
-          <div className="flex items-center justify-between mb-3">
-            <h4 className="text-sm font-semibold text-gray-200">Master Recording</h4>
-            <span className={`text-xs font-semibold px-2 py-0.5 rounded-full ${pct(trackData.masterOwners)===100?'bg-green-900/50 text-green-400':'bg-gray-800 text-gray-500'}`}>{pct(trackData.masterOwners)}%</span>
-          </div>
-          <OwnerRows field="masterOwners" roles={WRITER_ROLES} trackData={trackData} updOwner={updOwner} addOwner={addOwner} rmOwner={rmOwner} />
-        </div>
-        <div className="border-t border-gray-800" />
-        <div>
-          <div className="flex items-center justify-between mb-3">
-            <h4 className="text-sm font-semibold text-gray-200">Publishing</h4>
-            <span className={`text-xs font-semibold px-2 py-0.5 rounded-full ${pct(trackData.pubOwners)===100?'bg-green-900/50 text-green-400':'bg-gray-800 text-gray-500'}`}>{pct(trackData.pubOwners)}%</span>
-          </div>
-          <OwnerRows field="pubOwners" roles={PUB_ROLES} trackData={trackData} updOwner={updOwner} addOwner={addOwner} rmOwner={rmOwner} />
-        </div>
-      </div>}
+      <div className="flex flex-col gap-3">
+  {filtered.map(b => (
+    <div key={b.id} className="bg-gray-900 border border-gray-800 rounded-xl p-4">
+      <p className="text-white">{b.title}</p>
+    </div>
+  ))}
+</div>
 
       {sec === 6 && <div className="flex flex-col gap-4">
         <Inp label="Contact Name" value={trackData.contactName} onChange={v=>sf('contactName',v)} />

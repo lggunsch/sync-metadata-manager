@@ -526,10 +526,37 @@ function ImportModal({ projects, session, onClose, onImported, defaultProjId }) 
         reader.readAsArrayBuffer(file);
       });
     }
-    if (!hdrs.length) return;
-    const autoMap = {};
-    hdrs.forEach(h => { autoMap[h] = FIELD_MAP[h.toLowerCase().trim()] || ''; });
-    setHeaders(hdrs); setRows(data); setMapping(autoMap); setStep('map');
+   if (!hdrs.length) return;
+
+// Start with the existing rule-based mapping as a fallback
+const autoMap = {};
+hdrs.forEach(h => { autoMap[h] = FIELD_MAP[h.toLowerCase().trim()] || ''; });
+
+// Try AI mapping for any columns that didn't auto-map
+const unmapped = hdrs.filter(h => !autoMap[h]);
+if (unmapped.length > 0) {
+  try {
+    const columns = unmapped.map(h => ({
+      header: h,
+      sample: data[0]?.[h] ? String(data[0][h]).slice(0, 50) : ''
+    }));
+    const res = await fetch('/api/suggest-field-mappings', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ columns })
+    });
+    const { mapping } = await res.json();
+    if (mapping) {
+      Object.entries(mapping).forEach(([col, field]) => {
+        if (field && !autoMap[col]) autoMap[col] = field;
+      });
+    }
+  } catch (e) {
+    console.log('AI mapping failed, using rule-based only', e.message);
+  }
+}
+
+setHeaders(hdrs); setRows(data); setMapping(autoMap); setStep('map');
   };
 
   const applyMapping = (rows) => rows.map(row => {

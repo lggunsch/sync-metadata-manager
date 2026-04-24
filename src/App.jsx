@@ -1015,7 +1015,7 @@ function BriefBoard({ session, projects }) {
   .from('briefs')
   .select('*')
   .gt('deadline', new Date().toISOString())
-  .eq('closed', false)
+  .or('closed.eq.false,closed.is.null')
   .order('genre', { ascending: true });
 
       const { data: mySubs } = await supabase

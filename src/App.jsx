@@ -460,9 +460,9 @@ function TrackForm({ trackData, sec, sf, tog, updOwner, addOwner, rmOwner, pct, 
   );
 }
 
-function ImportModal({ projects, session, onClose, onImported }) {
+function ImportModal({ projects, session, onClose, onImported, defaultProjId }) {
   const [mode, setMode] = useState('single');
-  const [targetProjId, setTargetProjId] = useState('');
+  const [targetProjId, setTargetProjId] = useState(defaultProjId || '');
   const [rows, setRows] = useState([]);
   const [headers, setHeaders] = useState([]);
   const [mapping, setMapping] = useState({});
@@ -1397,7 +1397,7 @@ if(showAccount) return <AccountSettings session={session} onBack={() => setShowA
 
   return (
     <div className="min-h-screen bg-gray-950 text-gray-100 w-full overflow-x-hidden">
-      {showImport && <ImportModal projects={projects} session={session} onClose={() => setShowImport(false)} onImported={reloadProjects} />}
+      {showImport && <ImportModal projects={projects} session={session} onClose={() => setShowImport(false)} onImported={reloadProjects} defaultProjId={projId} />}{showImport && <ImportModal projects={projects} session={session} onClose={() => setShowImport(false)} onImported={reloadProjects} />}
 {shareLink && (
   <div className="fixed inset-0 bg-black/70 flex items-center justify-center z-50 p-4">
     <div className="bg-gray-900 border border-gray-700 rounded-xl w-full max-w-md p-5 flex flex-col gap-4">

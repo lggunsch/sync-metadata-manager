@@ -1011,11 +1011,12 @@ function BriefBoard({ session, projects }) {
 
   useEffect(() => {
     const load = async () => {
-   const { data } = await supabase
+   const now = new Date().toISOString();
+const { data } = await supabase
   .from('briefs')
   .select('*')
-  .or(`deadline.gt.${new Date().toISOString()},deadline.is.null`)
-  .or('closed.eq.false,closed.is.null')
+  .or(`deadline.gt.${now},deadline.is.null`)
+  .neq('closed', true)
   .order('genre', { ascending: true });
 
       const { data: mySubs } = await supabase

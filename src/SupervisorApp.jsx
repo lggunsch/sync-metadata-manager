@@ -21,7 +21,6 @@ function AudioPlayer({ url }) {
   const [playing, setPlaying] = useState(false);
   const [progress, setProgress] = useState(0);
   const [duration, setDuration] = useState(0);
-  const audioRef = useState(null);
   const ref = { current: null };
 
   const toggle = () => {
@@ -298,7 +297,7 @@ function BriefDetailView({ brief, onBack, session }) {
     );
   }
 
-  const isExpired = brief.deadline && new Date(brief.deadline) < new Date();
+  const isExpired = brief.closed || (brief.deadline && new Date(brief.deadline) < new Date());
   const fmt = ts => new Date(ts).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
 
   const sorted = [...submissions].sort((a, b) => {
@@ -313,7 +312,7 @@ function BriefDetailView({ brief, onBack, session }) {
         <button onClick={onBack} className="text-gray-500 hover:text-gray-300 text-sm transition-colors">← Briefs</button>
         <div className="flex-1">
           <span className="text-sm font-semibold text-white">{brief.title}</span>
-          {isExpired && <span className="ml-2 text-xs bg-gray-800 text-gray-500 px-2 py-0.5 rounded-full">Expired</span>}
+          {isExpired && <span className="ml-2 text-xs bg-gray-800 text-gray-500 px-2 py-0.5 rounded-full">{brief.closed ? 'Closed' : 'Expired'}</span>}
         </div>
       </div>
 
@@ -434,6 +433,12 @@ export default function SupervisorApp({ session }) {
     setBriefs(bs => bs.filter(b => b.id !== id));
   };
 
+  const closeBrief = async (id) => {
+    if (!window.confirm('Close this brief? It will be removed from the artist board but you can still view submissions.')) return;
+    await supabase.from('briefs').update({ closed: true }).eq('id', id);
+    setBriefs(bs => bs.map(b => b.id === id ? { ...b, closed: true } : b));
+  };
+
   const signOut = () => supabase.auth.signOut();
 
   const fmt = ts => new Date(ts).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
@@ -442,8 +447,8 @@ export default function SupervisorApp({ session }) {
     return <BriefDetailView brief={viewing} onBack={() => setViewing(null)} session={session} />;
   }
 
-  const activeBriefs = briefs.filter(b => !b.deadline || new Date(b.deadline) > new Date());
-  const expiredBriefs = briefs.filter(b => b.deadline && new Date(b.deadline) <= new Date());
+  const activeBriefs = briefs.filter(b => !b.closed && (!b.deadline || new Date(b.deadline) > new Date()));
+  const inactiveBriefs = briefs.filter(b => b.closed || (b.deadline && new Date(b.deadline) <= new Date()));
 
   return (
     <div className="min-h-screen bg-gray-950 text-gray-100">
@@ -575,6 +580,8 @@ export default function SupervisorApp({ session }) {
                           </div>
                           <div className="flex items-center gap-2 flex-shrink-0">
                             <span className="text-gray-600 text-sm">→</span>
+                            <button onClick={e => { e.stopPropagation(); closeBrief(b.id); }}
+                              className="text-xs text-gray-500 hover:text-yellow-400 transition-colors px-2 py-1">Close</button>
                             <button onClick={e => { e.stopPropagation(); deleteBrief(b.id); }}
                               className="text-gray-600 hover:text-red-400 text-xl leading-none transition-colors p-1">×</button>
                           </div>
@@ -584,11 +591,11 @@ export default function SupervisorApp({ session }) {
                   </div>
                 </div>
               )}
-              {expiredBriefs.length > 0 && (
+              {inactiveBriefs.length > 0 && (
                 <div>
-                  <p className="text-xs text-gray-500 font-medium uppercase tracking-wider mb-3">Expired</p>
+                  <p className="text-xs text-gray-500 font-medium uppercase tracking-wider mb-3">Closed / Expired</p>
                   <div className="flex flex-col gap-2">
-                    {expiredBriefs.map(b => (
+                    {inactiveBriefs.map(b => (
                       <div key={b.id} className="bg-gray-900 border border-gray-800 rounded-xl p-4 opacity-60 cursor-pointer hover:opacity-80 transition-opacity"
                         onClick={() => setViewing(b)}>
                         <div className="flex items-center justify-between gap-3">
@@ -597,7 +604,7 @@ export default function SupervisorApp({ session }) {
                             <div className="flex gap-2 mt-1 flex-wrap">
                               {b.genre && <span className="text-xs text-gray-500">{b.genre}</span>}
                               {b.project_type && <span className="text-xs text-gray-500">{b.project_type}</span>}
-                              {b.deadline && <span className="text-xs text-gray-600">Expired {fmt(b.deadline)}</span>}
+                              <span className="text-xs text-gray-600">{b.closed ? 'Closed' : `Expired ${fmt(b.deadline)}`}</span>
                             </div>
                           </div>
                           <div className="flex items-center gap-2 flex-shrink-0">

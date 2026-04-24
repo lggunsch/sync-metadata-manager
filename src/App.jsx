@@ -971,12 +971,12 @@ function BriefBoard({ session, projects }) {
 
   useEffect(() => {
     const load = async () => {
-      const { data } = await supabase
-        .from('briefs')
-        .select('*')
-        .gt('deadline', new Date().toISOString())
-        .order('created_at', { ascending: false });
-      if (data) setBriefs(data);
+   const { data } = await supabase
+  .from('briefs')
+  .select('*')
+  .gt('deadline', new Date().toISOString())
+  .eq('closed', false)
+  .order('genre', { ascending: true });
 
       const { data: mySubs } = await supabase
         .from('brief_submissions')
@@ -1106,8 +1106,19 @@ function BriefBoard({ session, projects }) {
           <p className="text-sm">{briefs.length === 0 ? 'No active briefs right now.' : 'No briefs match your filters.'}</p>
         </div>
       ) : (
-        <div className="flex flex-col gap-3">
-          {filtered.map(b => {
+        <div className="flex flex-col gap-6">
+  {Object.entries(
+    filtered.reduce((groups, b) => {
+      const key = b.genre || 'Other';
+      if (!groups[key]) groups[key] = [];
+      groups[key].push(b);
+      return groups;
+    }, {})
+  ).sort(([a], [b]) => a.localeCompare(b)).map(([genre, genreBriefs]) => (
+    <div key={genre}>
+      <p className="text-xs text-gray-500 font-medium uppercase tracking-wider mb-3">{genre}</p>
+      <div className="flex flex-col gap-3">
+        {genreBriefs.map(b => {
             const submitted = submissions.has(b.id);
             return (
               <div key={b.id} className="bg-gray-900 border border-gray-800 rounded-xl p-4">
@@ -1143,7 +1154,10 @@ function BriefBoard({ session, projects }) {
             );
           })}
         </div>
-      )}
+      </div>
+    ))}
+  </div>
+)}
 
       {/* Submission modal */}
       {submitFlow && (

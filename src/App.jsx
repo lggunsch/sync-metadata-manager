@@ -1000,7 +1000,8 @@ const { data } = await supabase
   .or(`deadline.gt.${now},deadline.is.null`)
   .neq('closed', true)
   .order('genre', { ascending: true });
-  console.log('briefs result', data, 'now', now);
+  if (data) setBriefs(data);
+console.log('briefs result', data, 'now', now);
 
       const { data: mySubs } = await supabase
         .from('brief_submissions')

@@ -471,24 +471,32 @@ function ImportModal({ projects, session, onClose, onImported }) {
   const fileRef = useRef();
 
   const FSM_FIELDS = [
-    {value:'',label:'— Skip this column —'},{value:'title',label:'Track Title'},{value:'artist',label:'Artist'},
-    {value:'featuring',label:'Featuring'},{value:'albumArtist',label:'Album Artist'},{value:'trackNum',label:'Track Number'},
-    {value:'duration',label:'Duration'},{value:'isrc',label:'ISRC'},{value:'isni',label:'ISNI'},
-    {value:'ipi',label:'IPI'},{value:'iswc',label:'ISWC'},{value:'upc',label:'UPC/EAN'},
-    {value:'pro',label:'PRO'},{value:'publisher',label:'Publisher'},{value:'label',label:'Label'},
-    {value:'masterOwner',label:'Master Owner'},{value:'copyrightYear',label:'Copyright Year'},
-    {value:'releaseDate',label:'Release Date'},{value:'fileFormat',label:'File Format'},
-    {value:'sampleRate',label:'Sample Rate'},{value:'bitDepth',label:'Bit Depth'},
-    {value:'bpm',label:'BPM'},{value:'key',label:'Key'},{value:'timeSig',label:'Time Signature'},
-    {value:'genre',label:'Genre'},{value:'subGenre',label:'Sub-Genre'},{value:'tempoFeel',label:'Tempo Feel'},
-    {value:'hasVocals',label:'Has Vocals'},{value:'vocalType',label:'Vocal Type'},{value:'language',label:'Language'},
-    {value:'explicit',label:'Explicit'},{value:'themes',label:'Themes / Keywords'},{value:'moods',label:'Moods'},
-    {value:'instruments',label:'Instruments'},{value:'energy',label:'Energy'},{value:'danceability',label:'Danceability'},
-    {value:'acousticness',label:'Acousticness'},{value:'instrumentalness',label:'Instrumentalness'},
-    {value:'valence',label:'Valence'},{value:'aiAssisted',label:'AI Assisted'},{value:'aiNotes',label:'AI Notes'},
-    {value:'contactName',label:'Contact Name'},{value:'contactEmail',label:'Contact Email'},
-    {value:'contactPhone',label:'Contact Phone'},{value:'comments',label:'Comments / Notes'},
-  ];
+  {value:'',label:'— Skip this column —'},
+  {value:'title',label:'Track Title'},
+  {value:'artist',label:'Artist'},
+  {value:'featuring',label:'Featuring'},
+  {value:'albumArtist',label:'Album Artist'},
+  {value:'trackNum',label:'Track Number'},
+  {value:'duration',label:'Duration'},
+  {value:'isrc',label:'ISRC'},
+  {value:'isni',label:'ISNI'},
+  {value:'ipi',label:'IPI'},
+  {value:'iswc',label:'ISWC'},
+  {value:'upc',label:'UPC/EAN'},
+  {value:'pro',label:'PRO'},
+  {value:'publisher',label:'Publisher'},
+  {value:'label',label:'Label'},
+  {value:'masterOwner',label:'Master Owner'},
+  {value:'copyrightYear',label:'Copyright Year'},
+  {value:'releaseDate',label:'Release Date'},
+  {value:'fileFormat',label:'File Format'},
+  {value:'sampleRate',label:'Sample Rate'},
+  {value:'bitDepth',label:'Bit Depth'},
+  {value:'contactName',label:'Contact Name'},
+  {value:'contactEmail',label:'Contact Email'},
+  {value:'contactPhone',label:'Contact Phone'},
+  {value:'comments',label:'Comments / Notes'},
+];
 
   const parseFile = async (file) => {
     const ext = file.name.split('.').pop().toLowerCase();
@@ -609,7 +617,7 @@ function ImportModal({ projects, session, onClose, onImported }) {
             </div>
             <div className="flex gap-2">
               <button onClick={() => setStep('upload')} className="bg-gray-800 hover:bg-gray-700 text-gray-400 px-4 py-2 rounded-lg text-sm transition-colors">← Back</button>
-              <button onClick={doImport} disabled={importing||!targetProjId||mappedCount===0}
+              <button onClick={doImport} disabled={importing||!targetProjId}
                 className="bg-indigo-600 hover:bg-indigo-500 disabled:opacity-50 text-white px-5 py-2 rounded-lg text-sm font-semibold transition-colors flex-1">
                 {importing?'Importing...':`Import ${mode==='single'?'1 track':rows.length+' tracks'}`}
               </button>

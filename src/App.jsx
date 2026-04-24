@@ -578,13 +578,15 @@ function ImportModal({ projects, session, onClose, onImported, defaultProjId }) 
                 </button>
               ))}
             </div>
-            <div className="flex flex-col gap-1">
-              <label className="text-xs text-gray-400 font-medium">Import into project</label>
-              <select value={targetProjId} onChange={e => setTargetProjId(e.target.value)} className={inp}>
-                <option value="">Select a project...</option>
-                {projects.map(p => <option key={p.id} value={p.id}>{p.name}</option>)}
-              </select>
-            </div>
+            {!defaultProjId && (
+  <div className="flex flex-col gap-1">
+    <label className="text-xs text-gray-400 font-medium">Import into project</label>
+    <select value={targetProjId} onChange={e => setTargetProjId(e.target.value)} className={inp}>
+      <option value="">Select a project...</option>
+      {projects.map(p => <option key={p.id} value={p.id}>{p.name}</option>)}
+    </select>
+  </div>
+)}
             <div className="border-2 border-dashed border-gray-700 rounded-xl p-6 text-center cursor-pointer hover:border-gray-500 transition-colors"
               onClick={() => fileRef.current.click()}>
               <div className="text-3xl mb-2">📂</div>

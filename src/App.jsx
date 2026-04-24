@@ -429,14 +429,6 @@ function TrackForm({ trackData, sec, sf, tog, updOwner, addOwner, rmOwner, pct, 
         {trackData.aiAssisted==='No' && <div className="bg-green-900/20 border border-green-800 rounded-xl p-4 text-sm text-green-400">✓ 100% human-created content</div>}
       </div>}
 
-      <div className="flex flex-col gap-3">
-  {filtered.map(b => (
-    <div key={b.id} className="bg-gray-900 border border-gray-800 rounded-xl p-4">
-      <p className="text-white">{b.title}</p>
-    </div>
-  ))}
-</div>
-
       {sec === 6 && <div className="flex flex-col gap-4">
         <Inp label="Contact Name" value={trackData.contactName} onChange={v=>sf('contactName',v)} />
         <Inp label="Email" value={trackData.contactEmail} onChange={v=>sf('contactEmail',v)} type="email" />

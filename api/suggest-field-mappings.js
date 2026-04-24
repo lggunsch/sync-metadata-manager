@@ -2,39 +2,54 @@ const Anthropic = require('@anthropic-ai/sdk');
 
 const client = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY });
 
-const FSM_FIELDS = [
-  'title', 'artist', 'featuring', 'albumArtist', 'trackNum', 'duration',
-  'isrc', 'isni', 'ipi', 'iswc', 'upc', 'pro', 'publisher', 'label',
-  'masterOwner', 'copyrightYear', 'releaseDate', 'fileFormat', 'sampleRate',
-  'bitDepth', 'contactName', 'contactEmail', 'contactPhone', 'comments'
-];
-
 module.exports = async function handler(req, res) {
   if (req.method !== 'POST') return res.status(405).end();
 
   const { columns } = req.body;
   if (!columns || !columns.length) return res.status(400).json({ error: 'No columns provided' });
 
-  const columnList = columns.map(c => 
+  const columnList = columns.map(c =>
     `- "${c.header}": sample value "${c.sample}"`
   ).join('\n');
 
   try {
     const message = await client.messages.create({
-      model: 'claude-sonnet-4-20250514',
+      model: 'claude-sonnet-4-5',
       max_tokens: 1024,
       messages: [{
         role: 'user',
-        content: `You are helping map CSV columns to music metadata fields in a sync licensing app.
+        content: `You are mapping CSV column headers to music metadata fields for a sync licensing app.
 
-Available FSM fields: ${FSM_FIELDS.join(', ')}
+Available fields and what they mean:
+- title: song/track name
+- artist: performing artist name
+- featuring: featured artist
+- albumArtist: album artist
+- trackNum: track number or position
+- duration: length/runtime of the track
+- isrc: recording code, ISRC code, track ID
+- isni: ISNI identifier
+- ipi: IPI number, rights holder number
+- iswc: ISWC code, work code
+- upc: UPC, EAN, product code
+- pro: PRO, rights org, performing rights organization, ASCAP/BMI/SESAC
+- publisher: publishing company, publishing house
+- label: record label, record company
+- masterOwner: master rights holder, rights holder, master owner
+- copyrightYear: copyright year, year registered, year
+- releaseDate: release date, street date, drop date
+- fileFormat: file format, audio quality, format
+- sampleRate: sample rate, sample frequency, hz
+- bitDepth: bit depth, bit resolution, resolution
+- contactName: contact name, contact person, rep name
+- contactEmail: email, contact email, contact address
+- contactPhone: phone, contact phone, booking number
+- comments: notes, comments, additional info
 
-CSV columns to map:
+CSV columns to map (header: sample value):
 ${columnList}
 
-Return a JSON object where each key is the exact column header and the value is the best matching FSM field name, or null if no match. Only use field names from the available list. Return only valid JSON, no other text.
-
-Example: {"Track Title": "title", "ISRC Code": "isrc", "Vibe": null}`
+Return ONLY a valid JSON object mapping each column header to the best FSM field name or null. No explanation, no markdown, just JSON.`
       }]
     });
 

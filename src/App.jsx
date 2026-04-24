@@ -1020,7 +1020,7 @@ const { data } = await supabase
     };
     load();
   }, [session.user.id]);
-console.log('briefs', briefs.length, 'filtered', filtered.length, 'filters', filters);
+
   const filtered = briefs.filter(b => {
     if (filters.genre && !b.genre?.toLowerCase().includes(filters.genre.toLowerCase())) return false;
     if (filters.mood && b.mood !== filters.mood) return false;

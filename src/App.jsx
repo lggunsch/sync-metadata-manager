@@ -731,7 +731,7 @@ function PitchManager({ session }) {
         <div className="bg-gray-900 border border-gray-700 rounded-xl p-4 mb-4">
           <h3 className="text-sm font-semibold text-gray-200 mb-4">{editing?'Edit Pitch':'Log New Pitch'}</h3>
           <div className="flex flex-col gap-3">
-            {form.brief_id ? (
+            {editing ? (
   <div className="flex flex-col gap-1">
     <label className="text-xs text-gray-400 font-medium">Track</label>
     <div className="bg-gray-800/50 border border-gray-700 rounded-lg px-3 py-2 text-sm text-gray-400">

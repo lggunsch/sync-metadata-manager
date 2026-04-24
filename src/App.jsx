@@ -463,6 +463,9 @@ function TrackForm({ trackData, sec, sf, tog, updOwner, addOwner, rmOwner, pct, 
 function ImportModal({ projects, session, onClose, onImported, defaultProjId }) {
   const [mode, setMode] = useState('single');
   const [targetProjId, setTargetProjId] = useState(defaultProjId || '');
+  useEffect(() => {
+  if (defaultProjId) setTargetProjId(defaultProjId);
+}, [defaultProjId]);
   const [rows, setRows] = useState([]);
   const [headers, setHeaders] = useState([]);
   const [mapping, setMapping] = useState({});

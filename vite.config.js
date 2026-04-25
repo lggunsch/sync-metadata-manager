@@ -8,6 +8,24 @@ export default defineConfig({
     VitePWA({
       registerType: 'autoUpdate',
       includeAssets: ['favicon.ico', 'apple-touch-icon.png'],
+      workbox: {
+        // Don't precache the Essentia bundle — it's 2.5MB and only needed
+        // when an artist uploads audio. Cache it at runtime instead.
+        globIgnores: ['**/essentia*.js'],
+        runtimeCaching: [
+          {
+            urlPattern: /\/assets\/essentia.*\.js$/,
+            handler: 'CacheFirst',
+            options: {
+              cacheName: 'essentia-cache',
+              expiration: {
+                maxEntries: 5,
+                maxAgeSeconds: 60 * 60 * 24 * 365,
+              },
+            },
+          },
+        ],
+      },
       manifest: {
         name: 'FriedSoda Music',
         short_name: 'FSM',

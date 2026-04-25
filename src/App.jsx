@@ -2,6 +2,7 @@ import { useState, useEffect, useRef, useCallback } from "react";
 import { supabase } from "./supabase";
 import InstallBanner from "./InstallBanner";
 import AccountSettings from "./AccountSettings";
+import { analyzeAudio } from "./lib/audioAnalysis";
 
 const MOODS = ['Dark','Uplifting','Melancholic','Intense','Calm','Dreamy','Aggressive','Romantic','Nostalgic','Mysterious','Triumphant','Tense','Playful','Epic','Intimate','Cinematic','Ethereal','Gritty','Anthemic','Hopeful'];
 const INSTRUMENTS = ['Acoustic Guitar','Electric Guitar','Bass Guitar','Drums','Piano','Keys/Organ','Strings','Synth/Pad','Brass','Woodwinds','Choir','Full Orchestra','Electronic/808','Percussion','Violin','Cello','Trumpet','Saxophone','Flute','Banjo','Mandolin','Ukulele','Harp','Harmonica'];
@@ -309,9 +310,8 @@ function OwnerRows({ field, roles, trackData, updOwner, addOwner, rmOwner }) {
   );
 }
 
-function TrackForm({ trackData, sec, sf, tog, updOwner, addOwner, rmOwner, pct, saveTrack, setSec, onAudioUpload, onAudioDelete, audioUploading }) {
+function TrackForm({ trackData, sec, sf, tog, updOwner, addOwner, rmOwner, pct, saveTrack, setSec, onAudioUpload, onAudioDelete, audioUploading, audioAnalyzing }) {
   const audioFileRef = useRef();
-
   return (
     <div className="bg-gray-900 border border-gray-800 rounded-xl p-4 mb-4">
       <h3 className="text-sm font-semibold text-gray-200 mb-4">{SECTIONS[sec]}</h3>
@@ -330,7 +330,13 @@ function TrackForm({ trackData, sec, sf, tog, updOwner, addOwner, rmOwner, pct, 
           <label className="text-xs text-gray-400 font-medium">Audio File (MP3)</label>
           {trackData.audioUrl ? (
             <div className="flex flex-col gap-2">
-              <AudioPlayer url={trackData.audioUrl} />
+             <AudioPlayer url={trackData.audioUrl} />
+              {audioAnalyzing && (
+                <div className="text-xs text-indigo-400 mt-2 flex items-center gap-2">
+                  <span className="inline-block w-3 h-3 border-2 border-indigo-400 border-t-transparent rounded-full animate-spin"></span>
+                  Analyzing audio...
+                </div>
+              )}
               <button
                 onClick={onAudioDelete}
                 className="text-xs text-red-400 hover:text-red-300 text-left w-fit transition-colors"
@@ -1285,7 +1291,7 @@ export default function App({ session }) {
 const [printData, setPrintData] = useState(null);
 const [shareLink, setShareLink] = useState(null);
 const [shareLoading, setShareLoading] = useState(false);  const [audioUploading, setAudioUploading] = useState(false);
-const [sharePrompt, setSharePrompt] = useState(null);
+const [audioAnalyzing, setAudioAnalyzing] = useState(false);const [sharePrompt, setSharePrompt] = useState(null);
   useEffect(() => {
     supabase.from('projects').select('*, tracks(*)').order('created_at',{ascending:false})
       .then(({data}) => {if(data)setProjects(data.map(p=>({...p,tracks:p.tracks||[]})));setLoaded(true);});
@@ -1304,13 +1310,44 @@ const [sharePrompt, setSharePrompt] = useState(null);
   // ── Audio upload ──────────────────────────────────────────────────────────
   const handleAudioUpload = async (file) => {
     setAudioUploading(true);
+    setAudioAnalyzing(true);
+
+    // Kick off upload and analysis simultaneously — both work on the same
+    // File object in memory and don't depend on each other.
     const ext = file.name.split('.').pop().toLowerCase();
     const path = `${session.user.id}/${Date.now()}.${ext}`;
-    const { error } = await supabase.storage.from('audio').upload(path, file, { upsert: false });
-    if (error) { alert('Upload failed: ' + error.message); setAudioUploading(false); return; }
+
+    const uploadTask = supabase.storage.from('audio').upload(path, file, { upsert: false });
+    const analysisTask = analyzeAudio(file);
+
+    // Handle upload result
+    const { error } = await uploadTask;
+    if (error) {
+      alert('Upload failed: ' + error.message);
+      setAudioUploading(false);
+      setAudioAnalyzing(false);
+      return;
+    }
     const { data: urlData } = supabase.storage.from('audio').getPublicUrl(path);
     setTrackData(d => ({ ...d, audioUrl: urlData.publicUrl, audioPath: path }));
     setAudioUploading(false);
+
+    // Handle analysis result (may already be done by the time we await it)
+    try {
+      const result = await analysisTask;
+      setTrackData(d => ({
+        ...d,
+        bpm: d.bpm || String(result.bpm),
+        key: d.key || result.key,
+        duration: d.duration || result.duration,
+        energy: result.energy,
+        danceability: result.danceability,
+      }));
+    } catch (err) {
+      console.error('[FSM] Audio analysis failed:', err);
+    } finally {
+      setAudioAnalyzing(false);
+    }
   };
 
   const handleAudioDelete = async () => {
@@ -1663,6 +1700,7 @@ if(showAccount) return <AccountSettings session={session} onBack={() => setShowA
             onAudioUpload={handleAudioUpload}
             onAudioDelete={handleAudioDelete}
             audioUploading={audioUploading}
+            audioAnalyzing={audioAnalyzing}
           />
           <div className="fixed bottom-0 left-0 right-0 bg-gray-950 border-t border-gray-800 px-4 py-3 flex items-center justify-between gap-2">
             <button onClick={() => setSec(s=>Math.max(0,s-1))} disabled={sec===0}

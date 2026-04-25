@@ -229,11 +229,15 @@ export default function PublicPlaylist({ token }) {
                   )}
                   {d.stemsUrl && (
                     <button
-                      onClick={() => {
+                      onClick={async () => {
+                        const res = await fetch(d.stemsUrl);
+                        const blob = await res.blob();
+                        const blobUrl = URL.createObjectURL(blob);
                         const link = document.createElement('a');
-                        link.href = d.stemsUrl;
+                        link.href = blobUrl;
                         link.download = (d.title || 'track') + '-stems.zip';
                         link.click();
+                        URL.revokeObjectURL(blobUrl);
                       }}
                       className="text-xs text-indigo-400 hover:text-indigo-300 transition-colors text-left w-fit"
                     >

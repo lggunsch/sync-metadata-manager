@@ -55,7 +55,7 @@ const newTrackData = () => ({
   masterOwners:[{name:'',role:'',pct:''}],
   pubOwners:[{name:'',role:'',pct:''}],
   contactName:'', contactEmail:'', contactPhone:'', comments:'',
-  audioUrl:'', audioPath:''
+  audioUrl:'', audioPath:'', stemsUrl:'', stemsPath:''
 });
 
 const newPitch = () => ({
@@ -330,8 +330,9 @@ const CRITICAL_FIELDS = [
   { key: 'contactEmail', label: 'Contact Email' },
 ];
 
-function TrackForm({ trackData, sec, sf, tog, updOwner, addOwner, rmOwner, pct, saveTrack, setSec, onAudioUpload, onAudioDelete, audioUploading, audioAnalyzing }) {
+function TrackForm({ trackData, sec, sf, tog, updOwner, addOwner, rmOwner, pct, saveTrack, setSec, onAudioUpload, onAudioDelete, audioUploading, audioAnalyzing, onStemsUpload, onStemsDelete, stemsUploading }) {
   const audioFileRef = useRef();
+  const stemsFileRef = useRef();
   const missing = CRITICAL_FIELDS.filter(f => !trackData[f.key] || String(trackData[f.key]).trim() === '');
   return (
     <div className="bg-gray-900 border border-gray-800 rounded-xl p-4 mb-4">
@@ -385,6 +386,44 @@ function TrackForm({ trackData, sec, sf, tog, updOwner, addOwner, rmOwner, pct, 
                 className="bg-gray-800 hover:bg-gray-700 disabled:opacity-50 border border-gray-700 border-dashed text-gray-400 text-xs px-4 py-3 rounded-lg w-full transition-colors"
               >
                 {audioUploading ? 'Uploading...' : '+ Upload MP3'}
+              </button>
+            </div>
+          )}
+        </div>
+
+        {/* ── Stems Pack Upload (zip) ── */}
+        <div className="flex flex-col gap-2">
+          <label className="text-xs text-gray-400 font-medium">Stems Pack (zip, optional)</label>
+          {trackData.stemsUrl ? (
+            <div className="flex items-center justify-between gap-2 bg-gray-800/50 border border-gray-700 rounded-lg px-3 py-2">
+              <span className="text-xs text-gray-300 truncate">📦 Stems pack uploaded</span>
+              <div className="flex gap-3 flex-shrink-0">
+                <a href={trackData.stemsUrl} download className="text-xs text-indigo-400 hover:text-indigo-300 transition-colors">
+                  Download
+                </a>
+                <button
+                  onClick={onStemsDelete}
+                  className="text-xs text-red-400 hover:text-red-300 transition-colors"
+                >
+                  Remove
+                </button>
+              </div>
+            </div>
+          ) : (
+            <div>
+              <input
+                ref={stemsFileRef}
+                type="file"
+                accept=".zip,application/zip,application/x-zip-compressed"
+                className="hidden"
+                onChange={e => { if(e.target.files[0]) onStemsUpload(e.target.files[0]); }}
+              />
+              <button
+                onClick={() => stemsFileRef.current.click()}
+                disabled={stemsUploading}
+                className="bg-gray-800 hover:bg-gray-700 disabled:opacity-50 border border-gray-700 border-dashed text-gray-400 text-xs px-4 py-3 rounded-lg w-full transition-colors"
+              >
+                {stemsUploading ? 'Uploading...' : '+ Upload Stems (zip)'}
               </button>
             </div>
           )}
@@ -1322,6 +1361,7 @@ const [printData, setPrintData] = useState(null);
 const [shareLink, setShareLink] = useState(null);
 const [shareLoading, setShareLoading] = useState(false);  const [audioUploading, setAudioUploading] = useState(false);
 const [audioAnalyzing, setAudioAnalyzing] = useState(false);
+const [stemsUploading, setStemsUploading] = useState(false);
 const [showBulkEdit, setShowBulkEdit] = useState(false);const [sharePrompt, setSharePrompt] = useState(null);
   useEffect(() => {
     supabase.from('projects').select('*, tracks(*)').order('created_at',{ascending:false})
@@ -1433,6 +1473,23 @@ const [showBulkEdit, setShowBulkEdit] = useState(false);const [sharePrompt, setS
     if (!trackData.audioPath) return;
     await supabase.storage.from('audio').remove([trackData.audioPath]);
     setTrackData(d => ({ ...d, audioUrl: '', audioPath: '' }));
+  };
+
+  // ── Stems pack upload (zip) ────────────────────────────────────────────────
+  const handleStemsUpload = async (file) => {
+    setStemsUploading(true);
+    const path = `${session.user.id}/stems-${Date.now()}.zip`;
+    const { error } = await supabase.storage.from('audio').upload(path, file, { upsert: false });
+    if (error) { alert('Stems upload failed: ' + error.message); setStemsUploading(false); return; }
+    const { data: urlData } = supabase.storage.from('audio').getPublicUrl(path);
+    setTrackData(d => ({ ...d, stemsUrl: urlData.publicUrl, stemsPath: path }));
+    setStemsUploading(false);
+  };
+
+  const handleStemsDelete = async () => {
+    if (!trackData.stemsPath) return;
+    await supabase.storage.from('audio').remove([trackData.stemsPath]);
+    setTrackData(d => ({ ...d, stemsUrl: '', stemsPath: '' }));
   };
 
   const saveTrack = async () => {
@@ -1837,6 +1894,9 @@ if(showAccount) return <AccountSettings session={session} onBack={() => setShowA
             onAudioDelete={handleAudioDelete}
             audioUploading={audioUploading}
             audioAnalyzing={audioAnalyzing}
+            onStemsUpload={handleStemsUpload}
+            onStemsDelete={handleStemsDelete}
+            stemsUploading={stemsUploading}
           />
           <div className="fixed bottom-0 left-0 right-0 bg-gray-950 border-t border-gray-800 px-4 py-3 flex items-center justify-between gap-2">
             <button onClick={() => setSec(s=>Math.max(0,s-1))} disabled={sec===0}

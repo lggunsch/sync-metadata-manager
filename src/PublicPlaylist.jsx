@@ -63,6 +63,7 @@ function MetaRow({ label, value }) {
     </div>
   );
 }
+
 const downloadMetadataPDF = (tracks, playlistName) => {
   const PRINT_CSS = `
     *{margin:0;padding:0;box-sizing:border-box;font-family:'Helvetica Neue',Arial,sans-serif}
@@ -86,7 +87,6 @@ const downloadMetadataPDF = (tracks, playlistName) => {
     const d = t.data || t;
     const f = (lbl, val) => val ? `<tr><td class="lbl">${lbl}</td><td class="val">${val}</td></tr>` : '';
     const tags = arr => arr && arr.length ? arr.map(x => `<span class="tag">${x}</span>`).join('') : '—';
-    const bar = v => `<div class="bar-row"><div class="bar"><div class="fill" style="width:${v}%"></div></div><span class="bval">${v}</span></div>`;
     return `<div class="page">
       <div class="hdr"><div class="ttl">${d.title || 'Untitled Track'}</div>
       <div class="sub">${[d.artist, d.featuring ? 'feat. ' + d.featuring : ''].filter(Boolean).join(' ')} · ${playlistName}</div></div>
@@ -125,6 +125,7 @@ const downloadMetadataPDF = (tracks, playlistName) => {
   win.document.close();
   win.print();
 };
+
 export default function PublicPlaylist({ token }) {
   const [playlist, setPlaylist] = useState(null);
   const [tracks, setTracks] = useState([]);
@@ -225,6 +226,19 @@ export default function PublicPlaylist({ token }) {
                         Download MP3
                       </button>
                     </div>
+                  )}
+                  {d.stemsUrl && (
+                    <button
+                      onClick={() => {
+                        const link = document.createElement('a');
+                        link.href = d.stemsUrl;
+                        link.download = (d.title || 'track') + '-stems.zip';
+                        link.click();
+                      }}
+                      className="text-xs text-indigo-400 hover:text-indigo-300 transition-colors text-left w-fit"
+                    >
+                      📦 Download Stems
+                    </button>
                   )}
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-8 gap-y-2">
                     <MetaRow label="ISRC" value={d.isrc} />

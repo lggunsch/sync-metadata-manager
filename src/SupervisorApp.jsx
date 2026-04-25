@@ -162,6 +162,19 @@ function PlaylistDetailView({ submission, onBack, isFavorited, onToggleFavorite 
                         Download MP3
                       </button>
                     )}
+                    {d.stemsUrl && (
+                      <button
+                        onClick={() => {
+                          const link = document.createElement('a');
+                          link.href = d.stemsUrl;
+                          link.download = (d.title || 'track') + '-stems.zip';
+                          link.click();
+                        }}
+                        className="text-xs text-indigo-400 hover:text-indigo-300 transition-colors"
+                      >
+                        📦 Download Stems
+                      </button>
+                    )}
                     <button
                       onClick={() => downloadMetadataPDF([t], submission.playlist_name)}
                       className="text-xs text-indigo-400 hover:text-indigo-300 transition-colors"

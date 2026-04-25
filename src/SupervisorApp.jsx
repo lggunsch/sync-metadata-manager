@@ -1,5 +1,6 @@
 import { useState, useEffect } from "react";
 import { supabase } from "./supabase";
+import { downloadMetadataPDF } from "./lib/pdfExport";
 
 const inp = "bg-gray-800 border border-gray-700 rounded-lg px-3 py-2 text-sm text-gray-100 placeholder-gray-600 focus:outline-none focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 w-full";
 
@@ -150,9 +151,9 @@ function PlaylistDetailView({ submission, onBack, isFavorited, onToggleFavorite 
 
               {isOpen && (
                 <div className="px-4 pb-4 border-t border-gray-800 pt-4 flex flex-col gap-4">
-                  {d.audioUrl && (
-                    <div className="flex flex-col gap-2">
-                      <AudioPlayer url={d.audioUrl} />
+                  {d.audioUrl && <AudioPlayer url={d.audioUrl} />}
+                  <div className="flex gap-4 flex-wrap">
+                    {d.audioUrl && (
                       <button
                         onClick={async () => {
                           const res = await fetch(d.audioUrl);
@@ -164,12 +165,18 @@ function PlaylistDetailView({ submission, onBack, isFavorited, onToggleFavorite 
                           a.click();
                           URL.revokeObjectURL(url);
                         }}
-                        className="text-xs text-indigo-400 hover:text-indigo-300 transition-colors text-left w-fit"
+                        className="text-xs text-indigo-400 hover:text-indigo-300 transition-colors"
                       >
-                        Download
+                        Download MP3
                       </button>
-                    </div>
-                  )}
+                    )}
+                    <button
+                      onClick={() => downloadMetadataPDF([t], submission.playlist_name)}
+                      className="text-xs text-indigo-400 hover:text-indigo-300 transition-colors"
+                    >
+                      Download PDF
+                    </button>
+                  </div>
 
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-8 gap-y-2">
                     <MetaRow label="ISRC" value={d.isrc} />

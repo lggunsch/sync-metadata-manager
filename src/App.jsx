@@ -4,6 +4,7 @@ import InstallBanner from "./InstallBanner";
 import AccountSettings from "./AccountSettings";
 import { analyzeAudio } from "./lib/audioAnalysis";
 import { exportTracksToCsv } from "./lib/csvExport";
+import BulkEditModal from "./components/BulkEditModal";
 
 const MOODS = ['Dark','Uplifting','Melancholic','Intense','Calm','Dreamy','Aggressive','Romantic','Nostalgic','Mysterious','Triumphant','Tense','Playful','Epic','Intimate','Cinematic','Ethereal','Gritty','Anthemic','Hopeful'];
 const INSTRUMENTS = ['Acoustic Guitar','Electric Guitar','Bass Guitar','Drums','Piano','Keys/Organ','Strings','Synth/Pad','Brass','Woodwinds','Choir','Full Orchestra','Electronic/808','Percussion','Violin','Cello','Trumpet','Saxophone','Flute','Banjo','Mandolin','Ukulele','Harp','Harmonica'];
@@ -1318,14 +1319,31 @@ export default function App({ session }) {
 const [printData, setPrintData] = useState(null);
 const [shareLink, setShareLink] = useState(null);
 const [shareLoading, setShareLoading] = useState(false);  const [audioUploading, setAudioUploading] = useState(false);
-const [audioAnalyzing, setAudioAnalyzing] = useState(false);const [sharePrompt, setSharePrompt] = useState(null);
+const [audioAnalyzing, setAudioAnalyzing] = useState(false);
+const [showBulkEdit, setShowBulkEdit] = useState(false);const [sharePrompt, setSharePrompt] = useState(null);
   useEffect(() => {
     supabase.from('projects').select('*, tracks(*)').order('created_at',{ascending:false})
       .then(({data}) => {if(data)setProjects(data.map(p=>({...p,tracks:p.tracks||[]})));setLoaded(true);});
   }, []);
 
   const proj = projects.find(p=>p.id===projId);
-  const filteredTracks = proj?.tracks.filter(t=>(t.data?.title||t.title||'').toLowerCase().includes(search.toLowerCase()))||[];
+  const filteredTracks = proj?.tracks.filter(t => {
+    if (!search) return true;
+    const q = search.toLowerCase();
+    const d = t.data || t;
+    const haystack = [
+      d.title, d.artist, d.featuring, d.albumArtist,
+      d.isrc, d.iswc, d.ipi, d.upc,
+      d.key, d.genre, d.subGenre,
+      d.publisher, d.label, d.masterOwner,
+      d.contactName, d.contactEmail,
+      d.themes, d.comments,
+      d.bpm ? `${d.bpm} bpm` : null,
+      ...(d.moods || []),
+      ...(d.instruments || []),
+    ].filter(Boolean).join(' ').toLowerCase();
+    return haystack.includes(q);
+  }) || [];
 
   const sf = useCallback((k,v) => setTrackData(d=>({...d,[k]:v})), []);
   const tog = useCallback((f,v) => setTrackData(d=>({...d,[f]:d[f].includes(v)?d[f].filter(x=>x!==v):[...d[f],v]})), []);
@@ -1375,6 +1393,22 @@ const [audioAnalyzing, setAudioAnalyzing] = useState(false);const [sharePrompt, 
     } finally {
       setAudioAnalyzing(false);
     }
+  };
+
+  const handleBulkEdit = async (updates) => {
+    const idsToUpdate = [...exportSel];
+    const tracksToUpdate = proj.tracks.filter(t => exportSel.has(t.id));
+
+    await Promise.all(tracksToUpdate.map(t =>
+      supabase.from('tracks').update({ data: { ...t.data, ...updates } }).eq('id', t.id)
+    ));
+
+    setProjects(ps => ps.map(p => p.id !== projId ? p : {
+      ...p,
+      tracks: p.tracks.map(t => idsToUpdate.includes(t.id) ? { ...t, data: { ...t.data, ...updates } } : t)
+    }));
+
+    setExportSel(new Set());
   };
 
   const handleAudioDelete = async () => {
@@ -1478,7 +1512,8 @@ if(showAccount) return <AccountSettings session={session} onBack={() => setShowA
 
   return (
     <div className="min-h-screen bg-gray-950 text-gray-100 w-full overflow-x-hidden">
-{showImport && <ImportModal projects={projects} session={session} onClose={() => setShowImport(false)} onImported={reloadProjects} defaultProjId={projId} />}{shareLink && (
+{showImport && <ImportModal projects={projects} session={session} onClose={() => setShowImport(false)} onImported={reloadProjects} defaultProjId={projId} />}
+{showBulkEdit && <BulkEditModal count={exportSel.size} onClose={() => setShowBulkEdit(false)} onSave={handleBulkEdit} />}{shareLink && (
   <div className="fixed inset-0 bg-black/70 flex items-center justify-center z-50 p-4">
     <div className="bg-gray-900 border border-gray-700 rounded-xl w-full max-w-md p-5 flex flex-col gap-4">
       <div className="flex items-center justify-between">
@@ -1636,9 +1671,12 @@ if(showAccount) return <AccountSettings session={session} onBack={() => setShowA
             </div>
           </div>
           <div className="flex gap-2 mb-4">
-            <input value={search} onChange={e=>setSearch(e.target.value)} placeholder="Search tracks..." className={`${inp} flex-1`} />
+            <input value={search} onChange={e=>setSearch(e.target.value)} placeholder="Search title, artist, ISRC, key, mood..." className={`${inp} flex-1`} />
 {exportSel.size>0 && (
   <div className="flex gap-2">
+    <button onClick={() => setShowBulkEdit(true)} className="bg-amber-600 hover:bg-amber-500 text-white px-3 py-2 rounded-lg text-xs font-semibold transition-colors whitespace-nowrap">
+      Edit ({exportSel.size})
+    </button>
     <button onClick={() => doExport([...exportSel])} className="bg-emerald-600 hover:bg-emerald-500 text-white px-3 py-2 rounded-lg text-xs font-semibold transition-colors whitespace-nowrap">
       PDF ({exportSel.size})
     </button>

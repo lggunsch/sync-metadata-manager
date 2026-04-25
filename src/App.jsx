@@ -1337,9 +1337,9 @@ const [audioAnalyzing, setAudioAnalyzing] = useState(false);const [sharePrompt, 
       const result = await analysisTask;
       setTrackData(d => ({
         ...d,
-        bpm: d.bpm || String(result.bpm),
-        key: d.key || result.key,
-        duration: d.duration || result.duration,
+        bpm: String(result.bpm),
+        key: result.key || d.key,
+        duration: result.duration,
         energy: result.energy,
         danceability: result.danceability,
       }));

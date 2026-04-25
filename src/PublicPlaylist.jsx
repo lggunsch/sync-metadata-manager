@@ -1,5 +1,6 @@
 import { useEffect, useState, useRef } from "react";
 import { supabase } from "./supabase";
+import { downloadMp3WithTags } from "./lib/id3";
 
 function AudioPlayer({ url }) {
   const audioRef = useRef();
@@ -218,16 +219,7 @@ export default function PublicPlaylist({ token }) {
                     <div className="flex flex-col gap-2">
                       <AudioPlayer url={d.audioUrl} />
                       <button
-                        onClick={async () => {
-                          const res = await fetch(d.audioUrl);
-                          const blob = await res.blob();
-                          const url = URL.createObjectURL(blob);
-                          const a = document.createElement('a');
-                          a.href = url;
-                          a.download = (d.title || 'track') + '.mp3';
-                          a.click();
-                          URL.revokeObjectURL(url);
-                        }}
+                        onClick={() => downloadMp3WithTags(d.audioUrl, d, (d.title || 'track') + '.mp3')}
                         className="text-xs text-indigo-400 hover:text-indigo-300 transition-colors text-left w-fit"
                       >
                         Download MP3

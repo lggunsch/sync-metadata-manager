@@ -1,6 +1,7 @@
 import { useState, useEffect } from "react";
 import { supabase } from "./supabase";
 import { downloadMetadataPDF } from "./lib/pdfExport";
+import { downloadMp3WithTags } from "./lib/id3";
 
 const inp = "bg-gray-800 border border-gray-700 rounded-lg px-3 py-2 text-sm text-gray-100 placeholder-gray-600 focus:outline-none focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 w-full";
 
@@ -155,16 +156,7 @@ function PlaylistDetailView({ submission, onBack, isFavorited, onToggleFavorite 
                   <div className="flex gap-4 flex-wrap">
                     {d.audioUrl && (
                       <button
-                        onClick={async () => {
-                          const res = await fetch(d.audioUrl);
-                          const blob = await res.blob();
-                          const url = URL.createObjectURL(blob);
-                          const a = document.createElement('a');
-                          a.href = url;
-                          a.download = (d.title || 'track') + '.mp3';
-                          a.click();
-                          URL.revokeObjectURL(url);
-                        }}
+                        onClick={() => downloadMp3WithTags(d.audioUrl, d, (d.title || 'track') + '.mp3')}
                         className="text-xs text-indigo-400 hover:text-indigo-300 transition-colors"
                       >
                         Download MP3

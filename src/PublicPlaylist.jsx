@@ -133,34 +133,19 @@ export default function PublicPlaylist({ token }) {
 
   useEffect(() => {
     const load = async () => {
-      const { data: pl, error: plErr } = await supabase
-        .from('playlists')
-        .select('*')
-        .eq('token', token)
-        .single();
+      const { data: result, error: rpcErr } = await supabase.rpc('get_public_playlist', {
+        p_token: token,
+        p_user_agent: navigator.userAgent
+      });
 
-      if (plErr || !pl) { setError('This link is invalid or has been removed.'); setLoading(false); return; }
-      setPlaylist(pl);
-await supabase.from('playlist_views').insert({
-  playlist_id: pl.id,
-  token: token,
-  user_agent: navigator.userAgent
-});
-      if (!pl.track_ids || pl.track_ids.length === 0) { setTracks([]); setLoading(false); return; }
+      if (rpcErr || !result) {
+        setError('This link is invalid or has been removed.');
+        setLoading(false);
+        return;
+      }
 
-      const { data: trackData, error: trackErr } = await supabase
-        .from('tracks')
-        .select('id, data')
-        .in('id', pl.track_ids);
-
-      if (trackErr) { setError('Failed to load tracks.'); setLoading(false); return; }
-
-      // preserve the order from track_ids
-      const ordered = pl.track_ids
-        .map(id => trackData.find(t => t.id === id))
-        .filter(Boolean);
-
-      setTracks(ordered);
+      setPlaylist(result.playlist);
+      setTracks(result.tracks || []);
       setLoading(false);
     };
     load();

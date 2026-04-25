@@ -1307,6 +1307,8 @@ export default function App({ session }) {
   const [projId, setProjId] = useState(null);
   const [trackData, setTrackData] = useState(null);
   const [trackId, setTrackId] = useState(null);
+  const [parentTrackId, setParentTrackId] = useState(null);
+  const [versionLabel, setVersionLabel] = useState(null);
   const [search, setSearch] = useState('');
   const [loaded, setLoaded] = useState(false);
   const [showAddProj, setShowAddProj] = useState(false);
@@ -1344,6 +1346,22 @@ const [showBulkEdit, setShowBulkEdit] = useState(false);const [sharePrompt, setS
     ].filter(Boolean).join(' ').toLowerCase();
     return haystack.includes(q);
   }) || [];
+
+  // Group versions under their parents — versions appear right after their parent in the list
+  const versionsByParent = filteredTracks.reduce((acc, t) => {
+    if (t.parent_track_id) {
+      (acc[t.parent_track_id] = acc[t.parent_track_id] || []).push(t);
+    }
+    return acc;
+  }, {});
+  const originals = filteredTracks.filter(t => !t.parent_track_id);
+  const orphanVersions = filteredTracks.filter(t => t.parent_track_id && !originals.find(o => o.id === t.parent_track_id));
+  const sortedTracks = [];
+  originals.forEach(o => {
+    sortedTracks.push(o);
+    (versionsByParent[o.id] || []).forEach(v => sortedTracks.push(v));
+  });
+  sortedTracks.push(...orphanVersions);
 
   const sf = useCallback((k,v) => setTrackData(d=>({...d,[k]:v})), []);
   const tog = useCallback((f,v) => setTrackData(d=>({...d,[f]:d[f].includes(v)?d[f].filter(x=>x!==v):[...d[f],v]})), []);
@@ -1428,8 +1446,45 @@ const [showBulkEdit, setShowBulkEdit] = useState(false);const [sharePrompt, setS
     setView('project'); setSec(0);
   };
 
-  const openTrack = t => {setTrackData(t.data||t);setTrackId(t.id||null);setSec(0);setView('track');};
-  const addTrack = () => {setTrackData(newTrackData());setTrackId(null);setSec(0);setView('track');};
+  const openTrack = t => {
+    setTrackData(t.data||t);
+    setTrackId(t.id||null);
+    setParentTrackId(t.parent_track_id||null);
+    setVersionLabel(t.version_label||null);
+    setSec(0);
+    setView('track');
+  };
+  const addTrack = () => {
+    setTrackData(newTrackData());
+    setTrackId(null);
+    setParentTrackId(null);
+    setVersionLabel(null);
+    setSec(0);
+    setView('track');
+  };
+  const createVersion = async () => {
+    const label = window.prompt('Version label (e.g. "Instrumental", "30s Edit", "TV Mix", "Stems"):');
+    if (!label || !label.trim()) return;
+    // If we're already viewing a version, new version becomes a sibling under the same parent
+    // (versions are flat siblings, not nested trees).
+    const ultimateParentId = parentTrackId || trackId;
+    const { data, error } = await supabase
+      .from('tracks')
+      .insert({
+        project_id: projId,
+        user_id: session.user.id,
+        data: trackData,
+        parent_track_id: ultimateParentId,
+        version_label: label.trim(),
+      })
+      .select()
+      .single();
+    if (error) { alert('Failed to create version: ' + error.message); return; }
+    if (data) {
+      setProjects(ps => ps.map(p => p.id !== projId ? p : { ...p, tracks: [...p.tracks, data] }));
+      openTrack(data); // Jump to the new version for editing
+    }
+  };
 
   const delTrack = async tid => {
     if(!window.confirm('Delete this track?'))return;
@@ -1695,22 +1750,26 @@ if(showAccount) return <AccountSettings session={session} onBack={() => setShowA
               {exportSel.size===proj?.tracks.length?'Deselect All':'Select All'}
             </button>
           )}
-          {filteredTracks.length===0 ? (
+          {sortedTracks.length===0 ? (
             <div className="text-center py-16 text-gray-600">
               {proj?.tracks.length===0?<><div className="text-3xl mb-2">♪</div><p className="text-sm">No tracks yet — tap + Track</p></>:<p className="text-sm">No tracks match "{search}"</p>}
             </div>
           ) : (
             <div className="flex flex-col gap-2">
-              {filteredTracks.map(t => {
+              {sortedTracks.map(t => {
                 const d=t.data||t;
+                const isVersion = !!t.parent_track_id;
+                const versionCount = (versionsByParent[t.id] || []).length;
                 return (
-                  <div key={t.id} className="bg-gray-900 border border-gray-800 rounded-xl p-4">
+                  <div key={t.id} className={`bg-gray-900 border border-gray-800 rounded-xl p-4 ${isVersion ? 'ml-6 border-l-2 border-l-purple-700/50' : ''}`}>
                     <div className="flex items-center gap-3">
                       <input type="checkbox" checked={exportSel.has(t.id)} onChange={() => togExport(t.id)} className="w-5 h-5 accent-indigo-500 cursor-pointer flex-shrink-0" />
                       <div className="flex-1 min-w-0" onClick={() => openTrack(t)}>
                         <div className="flex items-center gap-2 flex-wrap">
                           {d.trackNum && <span className="text-xs text-gray-600">{d.trackNum}.</span>}
                           <span className="font-medium text-gray-100 truncate">{d.title||'Untitled Track'}</span>
+                          {t.version_label && <span className="text-xs bg-purple-900/50 text-purple-300 px-2 py-0.5 rounded-full">{t.version_label}</span>}
+                          {versionCount > 0 && <span className="text-xs bg-indigo-900/50 text-indigo-300 px-2 py-0.5 rounded-full">+{versionCount} version{versionCount===1?'':'s'}</span>}
                           {d.explicit && <span className="text-xs bg-gray-700 text-gray-400 px-1.5 rounded">E</span>}
                           {d.aiAssisted==='Yes' && <span className="text-xs bg-red-900/50 text-red-400 px-2 py-0.5 rounded-full">AI</span>}
                           {d.audioUrl && <span className="text-xs bg-indigo-900/50 text-indigo-400 px-2 py-0.5 rounded-full">♪</span>}
@@ -1742,13 +1801,21 @@ if(showAccount) return <AccountSettings session={session} onBack={() => setShowA
 
       {view==='track' && trackData && (
         <div className="px-4 py-5 max-w-3xl mx-auto pb-24">
-          <div className="flex items-center gap-2 mb-5 text-sm overflow-hidden">
+          <div className="flex items-center gap-2 mb-3 text-sm overflow-hidden">
             <button onClick={() => setView('dashboard')} className="text-gray-600 hover:text-gray-400 transition-colors flex-shrink-0">Projects</button>
             <span className="text-gray-700 flex-shrink-0">›</span>
             <button onClick={() => {setView('project');setSec(0);}} className="text-gray-600 hover:text-gray-400 transition-colors truncate">{proj?.name}</button>
             <span className="text-gray-700 flex-shrink-0">›</span>
             <span className="text-gray-400 truncate">{trackData?.title||'New Track'}</span>
+            {versionLabel && <span className="text-xs bg-purple-900/50 text-purple-300 px-2 py-0.5 rounded-full flex-shrink-0">{versionLabel}</span>}
           </div>
+          {trackId && (
+            <div className="mb-4">
+              <button onClick={createVersion} className="text-xs bg-gray-800 hover:bg-gray-700 text-gray-300 px-3 py-1.5 rounded-lg transition-colors">
+                + Add alternate version
+              </button>
+            </div>
+          )}
           <div className="flex gap-1 mb-5 overflow-x-auto pb-1 -mx-1 px-1">
             {SECTIONS.map((s,i) => (
               <button key={i} onClick={() => setSec(i)}

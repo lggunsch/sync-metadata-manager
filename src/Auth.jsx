@@ -34,7 +34,7 @@ export default function Auth() {
       <div className="w-full max-w-sm">
         <div className="mb-8 text-center">
           <h1 className="text-2xl font-bold text-white">FriedSoda Music</h1>
-          <p className="text-gray-500 text-sm mt-1">Sync Metadata Manager</p>
+          <p className="text-gray-500 text-sm mt-1">Music Metadata Manager</p>
         </div>
         <div className="bg-gray-900 border border-gray-800 rounded-xl p-6 flex flex-col gap-4">
           <h2 className="text-sm font-semibold text-gray-200">

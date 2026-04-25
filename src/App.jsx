@@ -3,6 +3,7 @@ import { supabase } from "./supabase";
 import InstallBanner from "./InstallBanner";
 import AccountSettings from "./AccountSettings";
 import { analyzeAudio } from "./lib/audioAnalysis";
+import { exportTracksToCsv } from "./lib/csvExport";
 
 const MOODS = ['Dark','Uplifting','Melancholic','Intense','Calm','Dreamy','Aggressive','Romantic','Nostalgic','Mysterious','Triumphant','Tense','Playful','Epic','Intimate','Cinematic','Ethereal','Gritty','Anthemic','Hopeful'];
 const INSTRUMENTS = ['Acoustic Guitar','Electric Guitar','Bass Guitar','Drums','Piano','Keys/Organ','Strings','Synth/Pad','Brass','Woodwinds','Choir','Full Orchestra','Electronic/808','Percussion','Violin','Cello','Trumpet','Saxophone','Flute','Banjo','Mandolin','Ukulele','Harp','Harmonica'];
@@ -33,12 +34,21 @@ const STATUS_COLORS = {
 
 const inp = "bg-gray-800 border border-gray-700 rounded-lg px-3 py-2 text-sm text-gray-100 placeholder-gray-600 focus:outline-none focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 w-full";
 
+// Format validators for industry-standard identifiers.
+// Each takes a value and returns null if valid, or an error message string if invalid.
+const VALIDATORS = {
+  isrc: v => /^[A-Z]{2}-?[A-Z0-9]{3}-?\d{2}-?\d{5}$/i.test(v) ? null : 'ISRC format: CC-XXX-YY-NNNNN (12 chars)',
+  iswc: v => /^T-?\d{3}\.?\d{3}\.?\d{3}-?\d$/i.test(v) ? null : 'ISWC format: T-XXX.XXX.XXX-X',
+  ipi:  v => /^\d{9,11}$/.test(v) ? null : 'IPI must be 9-11 digits',
+  isni: v => /^(\d{4}-?){3}\d{3}[\dX]$/i.test(v.replace(/\s/g,'')) ? null : 'ISNI must be 16 digits (last can be X)',
+  upc:  v => /^\d{12,13}$/.test(v) ? null : 'UPC must be 12 digits, EAN must be 13',
+};
 const newTrackData = () => ({
   title:'', artist:'', featuring:'', albumArtist:'', trackNum:'', duration:'',
   isrc:'', isni:'', ipi:'', iswc:'', upc:'', pro:'', label:'', publisher:'', masterOwner:'',
   copyrightYear:'', releaseDate:'', fileFormat:'', sampleRate:'', bitDepth:'',
   bpm:'', key:'', timeSig:'', genre:'', subGenre:'',
-  energy:50, danceability:50, acousticness:50, instrumentalness:50, valence:50,
+  energy:50, danceability:50, acousticness:50, instrumentalness:50,
   tempoFeel:'', moods:[], instruments:[], hasVocals:'', vocalType:'', language:'', explicit:false, themes:'',
   aiAssisted:'No', aiNotes:'',
   masterOwners:[{name:'',role:'',pct:''}],
@@ -75,7 +85,7 @@ const FIELD_MAP = {
   'vocals':'hasVocals','has vocals':'hasVocals',
   'vocal type':'vocalType','vocaltype':'vocalType',
   'energy':'energy','danceability':'danceability','acousticness':'acousticness',
-  'instrumentalness':'instrumentalness','valence':'valence',
+  'instrumentalness':'instrumentalness',
   'ai assisted':'aiAssisted','aiassisted':'aiAssisted','ai':'aiAssisted',
   'comments':'comments','notes':'comments',
   'contact name':'contactName','contactname':'contactName','contact':'contactName',
@@ -90,7 +100,7 @@ function mapRow(row) {
     if (key && val !== undefined && val !== null && val !== '') {
       if (key === 'moods' || key === 'instruments') track[key] = String(val).split(',').map(s=>s.trim()).filter(Boolean);
       else if (key === 'explicit') track[key] = String(val).toLowerCase()==='yes'||val===true||val===1;
-      else if (['energy','danceability','acousticness','instrumentalness','valence'].includes(key)) track[key] = Math.min(100,Math.max(0,parseFloat(val)||50));
+      else if (['energy','danceability','acousticness','instrumentalness'].includes(key)) track[key] = Math.min(100,Math.max(0,parseFloat(val)||50));
       else track[key] = String(val);
     }
   }
@@ -191,7 +201,6 @@ function buildTrackHTML(t, projectName) {
         <div class="feat"><span class="fl">Danceability</span>${bar(d.danceability)}</div>
         <div class="feat"><span class="fl">Acousticness</span>${bar(d.acousticness)}</div>
         <div class="feat"><span class="fl">Instrumentalness</span>${bar(d.instrumentalness)}</div>
-        <div class="feat"><span class="fl">Valence</span>${bar(d.valence)}</div>
       </div></div>
     </div>
     <div class="cols" style="margin-top:0">
@@ -244,11 +253,13 @@ function PrintPreview({ tracks, projectName, onBack }) {
   );
 }
 
-function Inp({ label, value, onChange, placeholder='', type='text', cls='' }) {
+function Inp({ label, value, onChange, placeholder='', type='text', cls='', validate=null }) {
+  const error = validate && value ? validate(value) : null;
   return (
     <div className={`flex flex-col gap-1 ${cls}`}>
       {label && <label className="text-xs text-gray-400 font-medium">{label}</label>}
-      <input type={type} value={value} onChange={e => onChange(e.target.value)} placeholder={placeholder} className={inp} />
+      <input type={type} value={value} onChange={e => onChange(e.target.value)} placeholder={placeholder} className={`${inp} ${error ? 'border-yellow-600 focus:border-yellow-500 focus:ring-yellow-500' : ''}`} />
+      {error && <span className="text-xs text-yellow-500">{error}</span>}
     </div>
   );
 }
@@ -310,11 +321,25 @@ function OwnerRows({ field, roles, trackData, updOwner, addOwner, rmOwner }) {
   );
 }
 
+const CRITICAL_FIELDS = [
+  { key: 'title', label: 'Title' },
+  { key: 'artist', label: 'Artist' },
+  { key: 'isrc', label: 'ISRC' },
+  { key: 'masterOwner', label: 'Master Owner' },
+  { key: 'contactEmail', label: 'Contact Email' },
+];
+
 function TrackForm({ trackData, sec, sf, tog, updOwner, addOwner, rmOwner, pct, saveTrack, setSec, onAudioUpload, onAudioDelete, audioUploading, audioAnalyzing }) {
   const audioFileRef = useRef();
+  const missing = CRITICAL_FIELDS.filter(f => !trackData[f.key] || String(trackData[f.key]).trim() === '');
   return (
     <div className="bg-gray-900 border border-gray-800 rounded-xl p-4 mb-4">
       <h3 className="text-sm font-semibold text-gray-200 mb-4">{SECTIONS[sec]}</h3>
+      {missing.length > 0 && (
+        <div className="bg-yellow-900/20 border border-yellow-800/50 rounded-lg p-3 mb-4">
+          <p className="text-xs text-yellow-500 font-medium">Missing info: {missing.map(f => f.label).join(', ')}</p>
+        </div>
+      )}
       {sec === 0 && <div className="flex flex-col gap-3">
         <Inp label="Track Title *" value={trackData.title} onChange={v=>sf('title',v)} />
         <Inp label="Artist" value={trackData.artist} onChange={v=>sf('artist',v)} />
@@ -366,11 +391,11 @@ function TrackForm({ trackData, sec, sf, tog, updOwner, addOwner, rmOwner, pct, 
       </div>}
 
       {sec === 1 && <div className="flex flex-col gap-3">
-        <Inp label="ISRC" value={trackData.isrc} onChange={v=>sf('isrc',v)} placeholder="e.g. USRC12345678" />
-        <Inp label="ISNI" value={trackData.isni} onChange={v=>sf('isni',v)} />
-        <Inp label="IPI" value={trackData.ipi} onChange={v=>sf('ipi',v)} />
-        <Inp label="ISWC" value={trackData.iswc} onChange={v=>sf('iswc',v)} />
-        <Inp label="UPC/EAN" value={trackData.upc} onChange={v=>sf('upc',v)} />
+        <Inp label="ISRC" value={trackData.isrc} onChange={v=>sf('isrc',v)} placeholder="e.g. USRC12345678" validate={VALIDATORS.isrc} />
+        <Inp label="ISNI" value={trackData.isni} onChange={v=>sf('isni',v)} validate={VALIDATORS.isni} />
+        <Inp label="IPI" value={trackData.ipi} onChange={v=>sf('ipi',v)} validate={VALIDATORS.ipi} />
+        <Inp label="ISWC" value={trackData.iswc} onChange={v=>sf('iswc',v)} validate={VALIDATORS.iswc} />
+        <Inp label="UPC/EAN" value={trackData.upc} onChange={v=>sf('upc',v)} validate={VALIDATORS.upc} />
         <Sel label="PRO" value={trackData.pro} onChange={v=>sf('pro',v)} options={PROS} />
         <Inp label="Publisher" value={trackData.publisher} onChange={v=>sf('publisher',v)} />
         <Inp label="Label" value={trackData.label} onChange={v=>sf('label',v)} />
@@ -412,12 +437,14 @@ function TrackForm({ trackData, sec, sf, tog, updOwner, addOwner, rmOwner, pct, 
           <input value={trackData.themes} onChange={e=>sf('themes',e.target.value)} placeholder="e.g. loss, redemption, summer" className={inp} />
         </div>
         <div className="flex flex-col gap-4 bg-gray-800/50 rounded-xl p-4 border border-gray-700">
-          <p className="text-xs text-gray-500 font-semibold uppercase tracking-wider">Audio Features</p>
+          <div className="flex flex-col gap-0.5">
+            <p className="text-xs text-gray-500 font-semibold uppercase tracking-wider">Audio Features</p>
+            <p className="text-xs text-gray-600">Energy and Danceability auto-fill from uploaded audio. Acousticness and Instrumentalness are your estimates.</p>
+          </div>
           <Slider label="Energy" value={trackData.energy} onChange={v=>sf('energy',v)} />
           <Slider label="Danceability" value={trackData.danceability} onChange={v=>sf('danceability',v)} />
           <Slider label="Acousticness" value={trackData.acousticness} onChange={v=>sf('acousticness',v)} />
           <Slider label="Instrumentalness" value={trackData.instrumentalness} onChange={v=>sf('instrumentalness',v)} />
-          <Slider label="Valence (Positivity)" value={trackData.valence} onChange={v=>sf('valence',v)} />
         </div>
       </div>}
 
@@ -555,7 +582,7 @@ setHeaders(hdrs); setRows(data); setMapping(autoMap); setStep('map');
       if (val===undefined||val===null||val==='') continue;
       if (fsField==='moods'||fsField==='instruments') track[fsField] = String(val).split(',').map(s=>s.trim()).filter(Boolean);
       else if (fsField==='explicit') track[fsField] = String(val).toLowerCase()==='yes'||val===true||val===1;
-      else if (['energy','danceability','acousticness','instrumentalness','valence'].includes(fsField)) track[fsField] = Math.min(100,Math.max(0,parseFloat(val)||50));
+      else if (['energy','danceability','acousticness','instrumentalness'].includes(fsField)) track[fsField] = Math.min(100,Math.max(0,parseFloat(val)||50));
       else track[fsField] = String(val);
     }
     return track;
@@ -1604,6 +1631,7 @@ if(showAccount) return <AccountSettings session={session} onBack={() => setShowA
             </div>
             <div className="flex gap-2 flex-shrink-0">
               <button onClick={() => setShowImport(true)} className="bg-gray-800 hover:bg-gray-700 text-gray-300 px-3 py-2 rounded-lg text-xs transition-colors">Import</button>
+              <button onClick={() => exportTracksToCsv(proj?.tracks || [], `${proj?.name || 'tracks'}.csv`)} disabled={!proj?.tracks?.length} className="bg-gray-800 hover:bg-gray-700 disabled:opacity-40 disabled:cursor-not-allowed text-gray-300 px-3 py-2 rounded-lg text-xs transition-colors">Export All</button>
               <button onClick={addTrack} className="bg-indigo-600 hover:bg-indigo-500 text-white px-3 py-2 rounded-lg text-xs font-semibold transition-colors">+ Track</button>
             </div>
           </div>
@@ -1613,6 +1641,9 @@ if(showAccount) return <AccountSettings session={session} onBack={() => setShowA
   <div className="flex gap-2">
     <button onClick={() => doExport([...exportSel])} className="bg-emerald-600 hover:bg-emerald-500 text-white px-3 py-2 rounded-lg text-xs font-semibold transition-colors whitespace-nowrap">
       PDF ({exportSel.size})
+    </button>
+    <button onClick={() => exportTracksToCsv(proj.tracks.filter(t => exportSel.has(t.id)), `${proj?.name || 'tracks'}-selection.csv`)} className="bg-emerald-600 hover:bg-emerald-500 text-white px-3 py-2 rounded-lg text-xs font-semibold transition-colors whitespace-nowrap">
+      CSV ({exportSel.size})
     </button>
 <button onClick={() => setSharePrompt([...exportSel])} className="bg-indigo-600 hover:bg-indigo-500 text-white px-3 py-2 rounded-lg text-xs font-semibold transition-colors whitespace-nowrap">
   Share ({exportSel.size})

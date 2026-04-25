@@ -29,7 +29,7 @@ export default defineConfig({
       manifest: {
         name: 'FriedSoda Music',
         short_name: 'FSM',
-        description: 'Sync Metadata Manager for independent artists',
+        description: 'Music Metadata Manager for independent artists',
         theme_color: '#030712',
         background_color: '#030712',
         display: 'standalone',

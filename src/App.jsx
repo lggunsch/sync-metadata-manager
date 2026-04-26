@@ -1371,6 +1371,8 @@ const [showSpotify, setShowSpotify] = useState(false);const [sharePrompt, setSha
   }, []);
 
   const proj = projects.find(p=>p.id===projId);
+  // Tracks selected across all projects (cross-project selection)
+  const selectedTracks = projects.flatMap(p => p.tracks || []).filter(t => exportSel.has(t.id));
   const filteredTracks = proj?.tracks.filter(t => {
     if (!search) return true;
     const q = search.toLowerCase();
@@ -1507,16 +1509,18 @@ const [showSpotify, setShowSpotify] = useState(false);const [sharePrompt, setSha
 
   const handleBulkEdit = async (updates) => {
     const idsToUpdate = [...exportSel];
-    const tracksToUpdate = proj.tracks.filter(t => exportSel.has(t.id));
+    const allTracks = projects.flatMap(p => p.tracks || []);
+    const tracksToUpdate = allTracks.filter(t => exportSel.has(t.id));
 
     await Promise.all(tracksToUpdate.map(t =>
       supabase.from('tracks').update({ data: { ...t.data, ...updates } }).eq('id', t.id)
     ));
 
-    setProjects(ps => ps.map(p => p.id !== projId ? p : {
+    // Update local state across ALL projects (selection may span them)
+    setProjects(ps => ps.map(p => ({
       ...p,
-      tracks: p.tracks.map(t => idsToUpdate.includes(t.id) ? { ...t, data: { ...t.data, ...updates } } : t)
-    }));
+      tracks: (p.tracks || []).map(t => idsToUpdate.includes(t.id) ? { ...t, data: { ...t.data, ...updates } } : t)
+    })));
 
     setExportSel(new Set());
   };
@@ -1621,7 +1625,11 @@ const [showSpotify, setShowSpotify] = useState(false);const [sharePrompt, setSha
   };
 
   const togExport = tid => setExportSel(s=>{const n=new Set(s);n.has(tid)?n.delete(tid):n.add(tid);return n;});
-  const doExport = ids => {const ts=proj.tracks.filter(t=>ids.includes(t.id));if(ts.length)setPrintData({tracks:ts,projectName:proj.name});};
+  const doExport = ids => {
+    const allTracks = projects.flatMap(p => p.tracks || []);
+    const ts = allTracks.filter(t => ids.includes(t.id));
+    if (ts.length) setPrintData({ tracks: ts, projectName: proj?.name || 'Selection' });
+  };
 const doShare = async (ids, playlistName) => {
   setShareLoading(true);
   const name = playlistName || proj.name;
@@ -1803,7 +1811,7 @@ if(showAccount) return <AccountSettings session={session} onBack={() => setShowA
             <div className="flex flex-col gap-3">
               {projects.map(p => (
                 <div key={p.id} className="bg-gray-900 border border-gray-800 rounded-xl p-4 cursor-pointer active:bg-gray-800 transition-colors"
-                  onClick={() => {setProjId(p.id);setSearch('');setExportSel(new Set());setView('project');}}>
+                  onClick={() => {setProjId(p.id);setSearch('');setView('project');}}>
                   <div className="flex items-center justify-between">
                     <div className="flex-1 min-w-0 pr-3">
                       <h3 className="font-semibold text-gray-100 truncate">{p.name}</h3>
@@ -1839,14 +1847,17 @@ if(showAccount) return <AccountSettings session={session} onBack={() => setShowA
           <div className="flex gap-2 mb-4">
             <input value={search} onChange={e=>setSearch(e.target.value)} placeholder="Search title, artist, ISRC, key, mood..." className={`${inp} flex-1`} />
 {exportSel.size>0 && (
-  <div className="flex gap-2">
+  <div className="flex gap-2 flex-wrap">
+    <button onClick={() => setExportSel(new Set())} className="bg-gray-800 hover:bg-gray-700 text-gray-400 px-3 py-2 rounded-lg text-xs transition-colors whitespace-nowrap">
+      Clear ({exportSel.size})
+    </button>
     <button onClick={() => setShowBulkEdit(true)} className="bg-amber-600 hover:bg-amber-500 text-white px-3 py-2 rounded-lg text-xs font-semibold transition-colors whitespace-nowrap">
       Edit ({exportSel.size})
     </button>
     <button onClick={() => doExport([...exportSel])} className="bg-emerald-600 hover:bg-emerald-500 text-white px-3 py-2 rounded-lg text-xs font-semibold transition-colors whitespace-nowrap">
       PDF ({exportSel.size})
     </button>
-    <button onClick={() => exportTracksToCsv(proj.tracks.filter(t => exportSel.has(t.id)), `${proj?.name || 'tracks'}-selection.csv`)} className="bg-emerald-600 hover:bg-emerald-500 text-white px-3 py-2 rounded-lg text-xs font-semibold transition-colors whitespace-nowrap">
+    <button onClick={() => exportTracksToCsv(selectedTracks, `${proj?.name || 'tracks'}-selection.csv`)} className="bg-emerald-600 hover:bg-emerald-500 text-white px-3 py-2 rounded-lg text-xs font-semibold transition-colors whitespace-nowrap">
       CSV ({exportSel.size})
     </button>
 <button onClick={() => setSharePrompt([...exportSel])} className="bg-indigo-600 hover:bg-indigo-500 text-white px-3 py-2 rounded-lg text-xs font-semibold transition-colors whitespace-nowrap">
@@ -1856,9 +1867,17 @@ if(showAccount) return <AccountSettings session={session} onBack={() => setShowA
 )}
           </div>
           {proj?.tracks.length>1 && (
-            <button onClick={() => setExportSel(s=>s.size===proj.tracks.length?new Set():new Set(proj.tracks.map(t=>t.id)))}
+            <button onClick={() => {
+              const currentIds = proj.tracks.map(t => t.id);
+              const allCurrentSelected = currentIds.length > 0 && currentIds.every(id => exportSel.has(id));
+              if (allCurrentSelected) {
+                setExportSel(s => new Set([...s].filter(id => !currentIds.includes(id))));
+              } else {
+                setExportSel(s => new Set([...s, ...currentIds]));
+              }
+            }}
               className="text-xs text-gray-500 hover:text-gray-300 transition-colors mb-3 block">
-              {exportSel.size===proj?.tracks.length?'Deselect All':'Select All'}
+              {proj?.tracks.length > 0 && proj.tracks.every(t => exportSel.has(t.id)) ? 'Deselect All in Project' : 'Select All in Project'}
             </button>
           )}
           {sortedTracks.length===0 ? (

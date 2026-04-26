@@ -1475,7 +1475,7 @@ const [showSpotify, setShowSpotify] = useState(false);const [sharePrompt, setSha
       const trackInserts = data.tracks.map(t => ({
         project_id: newProj.id,
         user_id: session.user.id,
-        data: t,
+        data: { ...newTrackData(), ...t },
       }));
       const { data: newTracks, error: tracksErr } = await supabase
         .from('tracks')
@@ -1498,7 +1498,7 @@ const [showSpotify, setShowSpotify] = useState(false);const [sharePrompt, setSha
         .insert({
           project_id: projId,
           user_id: session.user.id,
-          data: t,
+          data: { ...newTrackData(), ...t },
         })
         .select()
         .single();

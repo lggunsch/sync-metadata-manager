@@ -111,10 +111,11 @@ module.exports = async function handler(req, res) {
       }
       const album = await albumRes.json();
 
-      // Album endpoint's track items don't include external_ids (no ISRC).
-      // We need to re-fetch them in batch via /tracks?ids=
-      const trackIds = album.tracks.items.map(t => t.id).filter(Boolean).join(',');
-      if (!trackIds) {
+      // Album's track items don't include ISRC. Spotify restricted the batch
+      // /tracks?ids endpoint in late-2024 API changes — using single-track
+      // endpoint in parallel instead (still has wider access).
+      const trackIds = album.tracks.items.map(t => t.id).filter(Boolean);
+      if (!trackIds.length) {
         return res.status(200).json({
           type: 'album',
           albumName: album.name,
@@ -122,12 +123,13 @@ module.exports = async function handler(req, res) {
           tracks: [],
         });
       }
-      const tracksRes = await fetch(`https://api.spotify.com/v1/tracks?ids=${trackIds}`, { headers });
-      if (!tracksRes.ok) {
-        const t = await tracksRes.text();
-        return res.status(500).json({ error: `Spotify tracks API error: ${t}` });
-      }
-      const { tracks } = await tracksRes.json();
+
+      const trackResults = await Promise.all(trackIds.map(async (id) => {
+        const r = await fetch(`https://api.spotify.com/v1/tracks/${id}`, { headers });
+        if (!r.ok) return null;
+        return r.json();
+      }));
+      const tracks = trackResults.filter(Boolean);
 
       return res.status(200).json({
         type: 'album',

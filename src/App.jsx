@@ -5,6 +5,7 @@ import AccountSettings from "./AccountSettings";
 import { analyzeAudio } from "./lib/audioAnalysis";
 import { exportTracksToCsv } from "./lib/csvExport";
 import BulkEditModal from "./components/BulkEditModal";
+import SpotifyImportModal from "./components/SpotifyImportModal";
 
 const MOODS = ['Dark','Uplifting','Melancholic','Intense','Calm','Dreamy','Aggressive','Romantic','Nostalgic','Mysterious','Triumphant','Tense','Playful','Epic','Intimate','Cinematic','Ethereal','Gritty','Anthemic','Hopeful'];
 const INSTRUMENTS = ['Acoustic Guitar','Electric Guitar','Bass Guitar','Drums','Piano','Keys/Organ','Strings','Synth/Pad','Brass','Woodwinds','Choir','Full Orchestra','Electronic/808','Percussion','Violin','Cello','Trumpet','Saxophone','Flute','Banjo','Mandolin','Ukulele','Harp','Harmonica'];
@@ -1362,7 +1363,8 @@ const [shareLink, setShareLink] = useState(null);
 const [shareLoading, setShareLoading] = useState(false);  const [audioUploading, setAudioUploading] = useState(false);
 const [audioAnalyzing, setAudioAnalyzing] = useState(false);
 const [stemsUploading, setStemsUploading] = useState(false);
-const [showBulkEdit, setShowBulkEdit] = useState(false);const [sharePrompt, setSharePrompt] = useState(null);
+const [showBulkEdit, setShowBulkEdit] = useState(false);
+const [showSpotify, setShowSpotify] = useState(false);const [sharePrompt, setSharePrompt] = useState(null);
   useEffect(() => {
     supabase.from('projects').select('*, tracks(*)').order('created_at',{ascending:false})
       .then(({data}) => {if(data)setProjects(data.map(p=>({...p,tracks:p.tracks||[]})));setLoaded(true);});
@@ -1450,6 +1452,56 @@ const [showBulkEdit, setShowBulkEdit] = useState(false);const [sharePrompt, setS
       console.error('[FSM] Audio analysis failed:', err);
     } finally {
       setAudioAnalyzing(false);
+    }
+  };
+
+  const handleSpotifyImport = async (data) => {
+    if (data.type === 'album') {
+      // Create a new project from the album, populate with all tracks
+      const { data: newProj, error: projErr } = await supabase
+        .from('projects')
+        .insert({
+          user_id: session.user.id,
+          name: data.albumName || 'Untitled Album',
+          artist: data.albumArtist || '',
+          type: 'Album',
+        })
+        .select()
+        .single();
+      if (projErr) { alert('Failed to create project: ' + projErr.message); return; }
+
+      const trackInserts = data.tracks.map(t => ({
+        project_id: newProj.id,
+        user_id: session.user.id,
+        data: t,
+      }));
+      const { data: newTracks, error: tracksErr } = await supabase
+        .from('tracks')
+        .insert(trackInserts)
+        .select();
+      if (tracksErr) { alert('Failed to add tracks: ' + tracksErr.message); return; }
+
+      setProjects(ps => [{ ...newProj, tracks: newTracks || [] }, ...ps]);
+      setProjId(newProj.id);
+      setView('project');
+      return;
+    }
+
+    if (data.type === 'track') {
+      if (!projId) { alert('Open a project first to add a single track.'); return; }
+      const t = data.tracks[0];
+      if (!t) return;
+      const { data: newTrack, error } = await supabase
+        .from('tracks')
+        .insert({
+          project_id: projId,
+          user_id: session.user.id,
+          data: t,
+        })
+        .select()
+        .single();
+      if (error) { alert('Failed to add track: ' + error.message); return; }
+      setProjects(ps => ps.map(p => p.id !== projId ? p : { ...p, tracks: [...p.tracks, newTrack] }));
     }
   };
 
@@ -1625,7 +1677,8 @@ if(showAccount) return <AccountSettings session={session} onBack={() => setShowA
   return (
     <div className="min-h-screen bg-gray-950 text-gray-100 w-full overflow-x-hidden">
 {showImport && <ImportModal projects={projects} session={session} onClose={() => setShowImport(false)} onImported={reloadProjects} defaultProjId={projId} />}
-{showBulkEdit && <BulkEditModal count={exportSel.size} onClose={() => setShowBulkEdit(false)} onSave={handleBulkEdit} />}{shareLink && (
+{showBulkEdit && <BulkEditModal count={exportSel.size} onClose={() => setShowBulkEdit(false)} onSave={handleBulkEdit} />}
+{showSpotify && <SpotifyImportModal onClose={() => setShowSpotify(false)} onImport={handleSpotifyImport} />}{shareLink && (
   <div className="fixed inset-0 bg-black/70 flex items-center justify-center z-50 p-4">
     <div className="bg-gray-900 border border-gray-700 rounded-xl w-full max-w-md p-5 flex flex-col gap-4">
       <div className="flex items-center justify-between">
@@ -1779,6 +1832,7 @@ if(showAccount) return <AccountSettings session={session} onBack={() => setShowA
             <div className="flex gap-2 flex-shrink-0">
               <button onClick={() => setShowImport(true)} className="bg-gray-800 hover:bg-gray-700 text-gray-300 px-3 py-2 rounded-lg text-xs transition-colors">Import</button>
               <button onClick={() => exportTracksToCsv(proj?.tracks || [], `${proj?.name || 'tracks'}.csv`)} disabled={!proj?.tracks?.length} className="bg-gray-800 hover:bg-gray-700 disabled:opacity-40 disabled:cursor-not-allowed text-gray-300 px-3 py-2 rounded-lg text-xs transition-colors">Export All</button>
+              <button onClick={() => setShowSpotify(true)} className="bg-green-700 hover:bg-green-600 text-white px-3 py-2 rounded-lg text-xs font-semibold transition-colors">+ Spotify</button>
               <button onClick={addTrack} className="bg-indigo-600 hover:bg-indigo-500 text-white px-3 py-2 rounded-lg text-xs font-semibold transition-colors">+ Track</button>
             </div>
           </div>

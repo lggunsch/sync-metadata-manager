@@ -41,11 +41,14 @@ export default function Paywall({ session }) {
 
         <div className="grid grid-cols-1 gap-4">
           {/* Monthly */}
-          <div className="bg-gray-900 border border-gray-700 rounded-xl p-6">
+          <div className="bg-gray-900 border border-gray-700 rounded-xl p-6 relative">
+            <div className="absolute -top-3 left-1/2 -translate-x-1/2">
+              <span className="bg-emerald-600 text-white text-xs font-semibold px-3 py-1 rounded-full">14-Day Free Trial</span>
+            </div>
             <div className="flex items-start justify-between mb-4">
               <div>
                 <h2 className="text-lg font-semibold text-white">Monthly</h2>
-                <p className="text-gray-500 text-sm mt-1">Full access, cancel anytime</p>
+                <p className="text-gray-500 text-sm mt-1">14-day free trial · Cancel anytime</p>
               </div>
               <div className="text-right">
                 <span className="text-3xl font-bold text-white">$17</span>
@@ -61,7 +64,7 @@ export default function Paywall({ session }) {
             </ul>
             <button onClick={() => checkout(MONTHLY_PRICE_ID)} disabled={!!loading}
               className="w-full bg-indigo-600 hover:bg-indigo-500 disabled:opacity-50 text-white py-3 rounded-lg text-sm font-semibold transition-colors">
-              {loading === MONTHLY_PRICE_ID ? 'Loading...' : 'Get Started — $17/mo'}
+              {loading === MONTHLY_PRICE_ID ? 'Loading...' : 'Start Free Trial'}
             </button>
           </div>
 

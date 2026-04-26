@@ -1560,7 +1560,7 @@ const [showSpotify, setShowSpotify] = useState(false);const [sharePrompt, setSha
   };
 
   const openTrack = t => {
-    setTrackData(t.data||t);
+    setTrackData({ ...newTrackData(), ...(t.data || t) });
     setTrackId(t.id||null);
     setParentTrackId(t.parent_track_id||null);
     setVersionLabel(t.version_label||null);

@@ -35,7 +35,7 @@ export default function Paywall({ session }) {
       <div className="w-full max-w-lg">
         <div className="text-center mb-10">
           <h1 className="text-3xl font-bold text-white">FriedSoda Music</h1>
-          <p className="text-gray-500 mt-2">Sync Metadata Manager</p>
+          <p className="text-gray-500 mt-2">Music Metadata Manager</p>
           <p className="text-gray-400 mt-4 text-sm">Choose a plan to get started</p>
         </div>
 
@@ -48,7 +48,7 @@ export default function Paywall({ session }) {
                 <p className="text-gray-500 text-sm mt-1">Full access, cancel anytime</p>
               </div>
               <div className="text-right">
-                <span className="text-3xl font-bold text-white">$10</span>
+                <span className="text-3xl font-bold text-white">$17</span>
                 <span className="text-gray-500 text-sm">/mo</span>
               </div>
             </div>
@@ -61,7 +61,7 @@ export default function Paywall({ session }) {
             </ul>
             <button onClick={() => checkout(MONTHLY_PRICE_ID)} disabled={!!loading}
               className="w-full bg-indigo-600 hover:bg-indigo-500 disabled:opacity-50 text-white py-3 rounded-lg text-sm font-semibold transition-colors">
-              {loading === MONTHLY_PRICE_ID ? 'Loading...' : 'Get Started — $10/mo'}
+              {loading === MONTHLY_PRICE_ID ? 'Loading...' : 'Get Started — $17/mo'}
             </button>
           </div>
 
@@ -76,7 +76,7 @@ export default function Paywall({ session }) {
                 <p className="text-gray-500 text-sm mt-1">One payment, forever</p>
               </div>
               <div className="text-right">
-                <span className="text-3xl font-bold text-white">$99</span>
+                <span className="text-3xl font-bold text-white">$179</span>
                 <span className="text-gray-500 text-sm"> once</span>
               </div>
             </div>
@@ -89,7 +89,7 @@ export default function Paywall({ session }) {
             </ul>
             <button onClick={() => checkout(LIFETIME_PRICE_ID)} disabled={!!loading}
               className="w-full bg-indigo-600 hover:bg-indigo-500 disabled:opacity-50 text-white py-3 rounded-lg text-sm font-semibold transition-colors">
-              {loading === LIFETIME_PRICE_ID ? 'Loading...' : 'Get Lifetime Access — $99'}
+              {loading === LIFETIME_PRICE_ID ? 'Loading...' : 'Get Lifetime Access — $179'}
             </button>
           </div>
         </div>

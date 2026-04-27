@@ -1352,6 +1352,7 @@ export default function App({ session }) {
   const [search, setSearch] = useState('');
   const [loaded, setLoaded] = useState(false);
   const [showAddProj, setShowAddProj] = useState(false);
+  const [showNewChooser, setShowNewChooser] = useState(false);
   const [showAccount, setShowAccount] = useState(false);
   const [showImport, setShowImport] = useState(false);
   const [showMenu, setShowMenu] = useState(false);
@@ -1483,7 +1484,8 @@ const [showSpotify, setShowSpotify] = useState(false);const [sharePrompt, setSha
         .select();
       if (tracksErr) { alert('Failed to add tracks: ' + tracksErr.message); return; }
 
-      setProjects(ps => [{ ...newProj, tracks: newTracks || [] }, ...ps]);
+      const { data: freshData } = await supabase.from('projects').select('*, tracks(*)').order('created_at',{ascending:false});
+      if (freshData) setProjects(freshData.map(p => ({ ...p, tracks: p.tracks || [] })));
       setProjId(newProj.id);
       setView('project');
       return;
@@ -1749,7 +1751,7 @@ if(showAccount) return <AccountSettings session={session} onBack={() => setShowA
           </div>
           <div className="flex items-center gap-2">
             {tab==='projects' && (
-              <button onClick={() => setShowAddProj(true)}
+              <button onClick={() => { setShowNewChooser(true); setShowAddProj(false); }}
                 className="bg-indigo-600 hover:bg-indigo-500 text-white px-3 py-1.5 rounded-lg text-xs font-semibold transition-colors">
                 + New
               </button>
@@ -1761,10 +1763,6 @@ if(showAccount) return <AccountSettings session={session} onBack={() => setShowA
               </button>
               {showMenu && (
                 <div className="absolute right-0 top-10 bg-gray-900 border border-gray-700 rounded-xl shadow-xl z-50 min-w-36 overflow-hidden">
-                  {tab==='projects' && <button onClick={() => {setShowImport(true);setShowMenu(false);}}
-                    className="w-full text-left px-4 py-3 text-sm text-gray-300 hover:bg-gray-800 transition-colors border-b border-gray-800">
-                    Import File
-                  </button>}
                   <button onClick={() => {setShowAccount(true);setShowMenu(false);}}
   className="w-full text-left px-4 py-3 text-sm text-gray-300 hover:bg-gray-800 transition-colors border-b border-gray-800">
   Account Settings
@@ -1785,6 +1783,44 @@ if(showAccount) return <AccountSettings session={session} onBack={() => setShowA
 {view==='dashboard' && tab==='briefs' && <BriefBoard session={session} projects={projects} />}
       {view==='dashboard' && tab==='projects' && (
         <div className="px-4 py-6 max-w-4xl mx-auto">
+          {showNewChooser && (
+            <div className="bg-gray-900 border border-gray-700 rounded-xl p-4 mb-5">
+              <div className="flex items-center justify-between mb-3">
+                <h3 className="text-sm font-semibold text-gray-200">New Project</h3>
+                <button onClick={() => setShowNewChooser(false)} className="text-gray-600 hover:text-gray-300 text-xl leading-none">×</button>
+              </div>
+              <p className="text-xs text-gray-500 mb-4">How would you like to add your project?</p>
+              <div className="flex flex-col gap-2">
+                <button
+                  onClick={() => { setShowNewChooser(false); setShowAddProj(true); }}
+                  className="flex items-center gap-3 bg-gray-800 hover:bg-gray-700 text-gray-200 px-4 py-3 rounded-lg text-sm transition-colors text-left">
+                  <span className="text-lg">✏️</span>
+                  <div>
+                    <div className="font-medium text-gray-100">Blank Project</div>
+                    <div className="text-xs text-gray-500 mt-0.5">Start fresh and add tracks manually</div>
+                  </div>
+                </button>
+                <button
+                  onClick={() => { setShowNewChooser(false); setShowImport(true); }}
+                  className="flex items-center gap-3 bg-gray-800 hover:bg-gray-700 text-gray-200 px-4 py-3 rounded-lg text-sm transition-colors text-left">
+                  <span className="text-lg">📁</span>
+                  <div>
+                    <div className="font-medium text-gray-100">Import from File</div>
+                    <div className="text-xs text-gray-500 mt-0.5">Upload a CSV or Excel file</div>
+                  </div>
+                </button>
+                <button
+                  onClick={() => { setShowNewChooser(false); setShowSpotify(true); }}
+                  className="flex items-center gap-3 bg-green-900 hover:bg-green-800 text-green-100 px-4 py-3 rounded-lg text-sm transition-colors text-left">
+                  <span className="text-lg">🎵</span>
+                  <div>
+                    <div className="font-medium text-green-100">Import via Spotify URL</div>
+                    <div className="text-xs text-green-400 mt-0.5">Paste a Spotify album or track link</div>
+                  </div>
+                </button>
+              </div>
+            </div>
+          )}
           {showAddProj && (
             <div className="bg-gray-900 border border-gray-700 rounded-xl p-4 mb-5">
               <h3 className="text-sm font-semibold text-gray-200 mb-3">New Project</h3>
@@ -1838,9 +1874,7 @@ if(showAccount) return <AccountSettings session={session} onBack={() => setShowA
               <p className="text-gray-500 text-xs mt-0.5">{[proj?.artist,proj?.type].filter(Boolean).join(' · ')}</p>
             </div>
             <div className="flex gap-2 flex-shrink-0">
-              <button onClick={() => setShowImport(true)} className="bg-gray-800 hover:bg-gray-700 text-gray-300 px-3 py-2 rounded-lg text-xs transition-colors">Import</button>
               <button onClick={() => exportTracksToCsv(proj?.tracks || [], `${proj?.name || 'tracks'}.csv`)} disabled={!proj?.tracks?.length} className="bg-gray-800 hover:bg-gray-700 disabled:opacity-40 disabled:cursor-not-allowed text-gray-300 px-3 py-2 rounded-lg text-xs transition-colors">Export All</button>
-              <button onClick={() => setShowSpotify(true)} className="bg-green-700 hover:bg-green-600 text-white px-3 py-2 rounded-lg text-xs font-semibold transition-colors">+ Spotify</button>
               <button onClick={addTrack} className="bg-indigo-600 hover:bg-indigo-500 text-white px-3 py-2 rounded-lg text-xs font-semibold transition-colors">+ Track</button>
             </div>
           </div>

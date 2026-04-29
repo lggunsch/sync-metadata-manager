@@ -36,59 +36,80 @@ const IconCopy = () => (
 
 const inp = "bg-gray-800 border border-gray-700 rounded-lg px-3 py-2 text-sm text-gray-100 placeholder-gray-600 focus:outline-none focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 w-full";
 
-// ── Score a track against parsed brief requirements ───────────────────────────
 function scoreTrack(track, parsed) {
   const d = track.data || track;
-  let score = 45;
 
-  // BPM match
-  if (parsed.bpmMin && parsed.bpmMax) {
+  // Hard disqualifier — explicit content when brief says no
+  if (parsed.explicit === false && d.explicit === true) return 5;
+
+  let earned = 0;
+  let possible = 0;
+
+  // BPM (weight: 25) — only scores if brief specified a range
+  if (parsed.bpmMin != null && parsed.bpmMax != null) {
+    possible += 25;
     const bpm = parseFloat(d.bpm);
-    if (bpm >= parsed.bpmMin && bpm <= parsed.bpmMax) score += 18;
-    else if (bpm >= parsed.bpmMin - 12 && bpm <= parsed.bpmMax + 12) score += 8;
-    else if (bpm) score -= 8;
-  }
-
-  // Mood match
-  const trackMoods = (d.moods || []).map(m => m.toLowerCase());
-  const briefMoods = (parsed.moods || []).map(m => m.toLowerCase());
-  const moodHits = trackMoods.filter(m => briefMoods.some(bm => bm.includes(m) || m.includes(bm)));
-  score += moodHits.length * 10;
-
-  // Genre match
-  const briefGenres = (parsed.genres || []).map(g => g.toLowerCase());
-  const trackGenre = (d.genre || '').toLowerCase();
-  if (briefGenres.some(g => trackGenre.includes(g) || g.includes(trackGenre))) score += 12;
-
-  // Vocal match
-  if (parsed.vocalsWanted === 'No' && d.hasVocals === 'No') score += 12;
-  if (parsed.vocalsWanted === 'No' && d.hasVocals === 'Yes') score -= 14;
-  if (parsed.vocalsWanted === 'Yes' && d.hasVocals === 'Yes') score += 12;
-
-  // Energy match
-  if (parsed.energyMin != null && parsed.energyMax != null) {
-    const e = parseFloat(d.energy);
-    if (!isNaN(e)) {
-      if (e >= parsed.energyMin && e <= parsed.energyMax) score += 10;
-      else score -= 5;
+    if (!isNaN(bpm)) {
+      if (bpm >= parsed.bpmMin && bpm <= parsed.bpmMax) earned += 25;
+      else if (bpm >= parsed.bpmMin - 10 && bpm <= parsed.bpmMax + 10) earned += 10;
     }
   }
 
-  // Key preference
-  const trackKey = (d.key || '').toLowerCase();
-  if (parsed.preferredKeys?.includes('minor') && trackKey.includes('minor')) score += 8;
-  if (parsed.preferredKeys?.includes('major') && trackKey.includes('major')) score += 8;
+  // Moods (weight: 10 per mood, up to 3 moods counted)
+  const briefMoods = (parsed.moods || []).map(m => m.toLowerCase());
+  if (briefMoods.length > 0) {
+    const cap = Math.min(briefMoods.length, 3);
+    possible += cap * 10;
+    const trackMoods = (d.moods || []).map(m => m.toLowerCase());
+    const hits = trackMoods.filter(m => briefMoods.some(bm => bm.includes(m) || m.includes(bm))).length;
+    earned += Math.min(hits, cap) * 10;
+  }
 
-  // Theme/keyword overlap
+  // Genre (weight: 20)
+  const briefGenres = (parsed.genres || []).map(g => g.toLowerCase());
+  if (briefGenres.length > 0) {
+    possible += 20;
+    const trackGenre = (d.genre || '').toLowerCase();
+    if (briefGenres.some(g => trackGenre.includes(g) || g.includes(trackGenre))) earned += 20;
+  }
+
+  // Vocals (weight: 15) — only scores if brief specified a preference
+  if (parsed.vocalsWanted != null) {
+    possible += 15;
+    if (parsed.vocalsWanted === 'No' && d.hasVocals === 'No') earned += 15;
+    else if (parsed.vocalsWanted === 'Yes' && d.hasVocals === 'Yes') earned += 15;
+    // mismatch = 0 earned (no partial credit)
+  }
+
+  // Energy (weight: 10)
+  if (parsed.energyMin != null && parsed.energyMax != null) {
+    possible += 10;
+    const e = parseFloat(d.energy);
+    if (!isNaN(e) && e >= parsed.energyMin && e <= parsed.energyMax) earned += 10;
+  }
+
+  // Key preference (weight: 8)
+  if (parsed.preferredKeys?.length) {
+    possible += 8;
+    const trackKey = (d.key || '').toLowerCase();
+    if (parsed.preferredKeys.some(k => trackKey.includes(k.toLowerCase()))) earned += 8;
+  }
+
+  // Themes/keywords (weight: 6 per match, up to 2)
   const briefThemes = (parsed.themes || []).map(t => t.toLowerCase());
-  const trackThemes = (d.themes || '').toLowerCase();
-  const themeHits = briefThemes.filter(t => trackThemes.includes(t));
-  score += themeHits.length * 6;
+  if (briefThemes.length > 0) {
+    const cap = Math.min(briefThemes.length, 2);
+    possible += cap * 6;
+    const trackThemes = (d.themes || '').toLowerCase();
+    const hits = briefThemes.filter(t => trackThemes.includes(t)).length;
+    earned += Math.min(hits, cap) * 6;
+  }
 
-  // Explicit filter
-  if (parsed.explicit === false && d.explicit === true) score -= 20;
+  // No criteria extracted from brief — return neutral
+  if (possible === 0) return 50;
 
-  return Math.max(8, Math.min(99, Math.round(score)));
+  // Normalize earned/possible → 0–99
+  return Math.max(5, Math.min(99, Math.round((earned / possible) * 100)));
 }
 
 // ── MatchScore bar ────────────────────────────────────────────────────────────
@@ -588,7 +609,7 @@ export default function BriefFlow({ session, onClose, onSaved }) {
       });
       const { parsed: p } = await res.json();
 
-      // 2. Load all tracks from Supabase
+      // 2. Load all tracks
       const { data: projects } = await supabase
         .from('projects')
         .select('*, tracks(*)')
@@ -598,9 +619,10 @@ export default function BriefFlow({ session, onClose, onSaved }) {
         (proj.tracks || []).map(t => ({ ...t, projectName: proj.name }))
       );
 
-      // 3. Score and rank
+      // 3. Score, filter explicit if brief requires, then rank
       const scored = allTracks
         .map(t => ({ ...t, _score: scoreTrack(t, p || {}) }))
+        .filter(t => !(p?.explicit === false && (t.data || t).explicit === true))
         .sort((a, b) => b._score - a._score);
 
       setParsed(p);
@@ -608,7 +630,7 @@ export default function BriefFlow({ session, onClose, onSaved }) {
       setStep('results');
     } catch (err) {
       console.error('Brief analysis failed:', err);
-      // Fallback: load tracks and show unranked
+      // Fallback: load tracks unranked
       const { data: projects } = await supabase
         .from('projects')
         .select('*, tracks(*)')

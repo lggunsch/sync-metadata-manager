@@ -1344,10 +1344,14 @@ console.log('briefs result', data, 'now', now);
   );
 }
 export default function App({ session }) {
-  const [tab, setTab] = useState('home');
-  const [view, setView] = useState('dashboard');
+  const [tab, setTab] = useState(() => localStorage.getItem('fsm_tab') || 'home');
+  const [view, setView] = useState(() => {
+    const v = localStorage.getItem('fsm_view');
+    // Don't restore track-edit view — drop back to project list
+    return v === 'track' ? 'project' : (v || 'dashboard');
+  });
   const [projects, setProjects] = useState([]);
-  const [projId, setProjId] = useState(null);
+  const [projId, setProjId] = useState(() => localStorage.getItem('fsm_projId') || null);
   const [trackData, setTrackData] = useState(null);
   const [trackId, setTrackId] = useState(null);
   const [parentTrackId, setParentTrackId] = useState(null);
@@ -1373,6 +1377,11 @@ const [showSpotify, setShowSpotify] = useState(false);const [sharePrompt, setSha
     supabase.from('projects').select('*, tracks(*)').order('created_at',{ascending:false})
       .then(({data}) => {if(data)setProjects(data.map(p=>({...p,tracks:p.tracks||[]})));setLoaded(true);});
   }, []);
+
+  // Persist nav state so returning from another tab/app restores position
+  useEffect(() => { localStorage.setItem('fsm_tab', tab); }, [tab]);
+  useEffect(() => { localStorage.setItem('fsm_view', view); }, [view]);
+  useEffect(() => { if (projId) localStorage.setItem('fsm_projId', projId); }, [projId]);
 
   const proj = projects.find(p=>p.id===projId);
   // Tracks selected across all projects (cross-project selection)
@@ -1678,7 +1687,12 @@ const doShare = async (ids, playlistName) => {
   const link = `${window.location.origin}/p/${pl.token}`;
   setShareLink(link);
 };
-  const signOut = () => supabase.auth.signOut();
+  const signOut = () => {
+    localStorage.removeItem('fsm_tab');
+    localStorage.removeItem('fsm_view');
+    localStorage.removeItem('fsm_projId');
+    supabase.auth.signOut();
+  };
   const reloadProjects = async () => {
     const {data} = await supabase.from('projects').select('*, tracks(*)').order('created_at',{ascending:false});
     if(data)setProjects(data.map(p=>({...p,tracks:p.tracks||[]})));

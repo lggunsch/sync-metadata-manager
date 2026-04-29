@@ -5,7 +5,7 @@ const client = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY });
 module.exports = async function handler(req, res) {
   if (req.method !== 'POST') return res.status(405).end();
 
-  const { brief, parsed, tracks, artistName, artistEmail } = req.body;
+  const { briefText, brief, parsed, tracks, shareUrl, artistName, artistEmail } = req.body;
   if (!tracks || !tracks.length) {
     return res.status(400).json({ error: 'No tracks provided' });
   }
@@ -46,10 +46,11 @@ ${trackList}
 
 Guidelines:
 - Professional but warm, human tone — not stiff or corporate
-- Under 180 words
+- Under 200 words
 - Mention 1–2 specific details from the brief to show you read it carefully
 - Reference the track titles naturally
-- End with a clear CTA (happy to send files, stems, full metadata)
+- Include this shareable playlist link naturally in the body (e.g. "You can stream them here: URL"): ${shareUrl || ''}
+- End with a clear CTA (happy to send WAV files, stems, full metadata)
 - Do NOT write a subject line — just the email body
 - Sign off as ${artistName || 'the artist'}`
       }]

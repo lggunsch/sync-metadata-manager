@@ -319,9 +319,52 @@ function StepEmail({ session, briefText, parsed, tracks, onBack, onSaved }) {
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [copied, setCopied] = useState(false);
+  const [shareUrl, setShareUrl] = useState('');
+  const [playlistId, setPlaylistId] = useState(null);
+  const artistName = session?.user?.user_metadata?.full_name || session?.user?.email?.split('@')[0] || 'the artist';
+
+  // Replace greeting in email body when supervisor name changes
+  useEffect(() => {
+    if (!email || loading) return;
+    const name = supervisorName.trim();
+    setEmail(prev => prev.replace(/^Hi [^\n,]+/m, `Hi ${name || 'there'}`));
+  }, [supervisorName]);
+
+  // Replace share link placeholder if URL changes
+  useEffect(() => {
+    if (!email || !shareUrl || loading) return;
+    setEmail(prev => prev.replace(/\[SHARE_LINK\]/g, shareUrl));
+  }, [shareUrl, loading]);
 
   useEffect(() => {
-    const generate = async () => {
+    const init = async () => {
+      // 1. Create playlist + get share URL
+      let url = '';
+      let pid = null;
+      try {
+        const trackIds = tracks.map(t => t.id).filter(Boolean);
+        if (trackIds.length) {
+          const { data: pl } = await supabase
+            .from('playlists')
+            .insert({
+              user_id: session.user.id,
+              name: [supervisorName, project].filter(Boolean).join(' — ') || 'Pitch Playlist',
+              track_ids: trackIds,
+            })
+            .select()
+            .single();
+          if (pl?.token) {
+            url = `${window.location.origin}/p/${pl.token}`;
+            pid = pl.id;
+            setShareUrl(url);
+            setPlaylistId(pid);
+          }
+        }
+      } catch (e) {
+        console.error('Playlist creation failed', e);
+      }
+
+      // 2. Generate email with share URL already included
       try {
         const res = await fetch('/api/generate-pitch-email', {
           method: 'POST',
@@ -330,20 +373,37 @@ function StepEmail({ session, briefText, parsed, tracks, onBack, onSaved }) {
             brief: { text: briefText, supervisorName, company, project },
             parsed,
             tracks,
-            artistName: session?.user?.user_metadata?.full_name || session?.user?.email?.split('@')[0],
+            shareUrl: url,
+            artistName,
             artistEmail: session?.user?.email,
           }),
         });
         const { email: draft } = await res.json();
         if (draft) setEmail(draft);
       } catch {
-        // Fallback
-        const trackNames = tracks.map(t => `"${(t.data || t).title || 'Untitled'}"`).join(', ');
-        setEmail(`Hi ${supervisorName || 'there'},\n\nI wanted to share a few tracks that I think could work well for ${project || 'your project'}.\n\n${trackNames}\n\nAll tracks are cleared and ready for licensing. Happy to send WAV files, stems, and metadata on request.\n\nBest,\n${session?.user?.email?.split('@')[0] || 'the artist'}`);
+        const trackLines = tracks.map(t => {
+          const d = t.data || t;
+          return `"${d.title || 'Untitled'}" — ${d.genre || ''}${d.bpm ? `, ${d.bpm} BPM` : ''}`;
+        }).join('\n');
+        setEmail(
+`Hi ${supervisorName || 'there'},
+
+I came across your brief for ${project || 'your project'} and wanted to share a few tracks I think could be a strong fit.
+
+${trackLines}
+
+You can stream and download them here:
+${url || '[SHARE_LINK]'}
+
+All tracks are cleared and available for licensing. Happy to send WAV files, stems, and full metadata on request.
+
+Best,
+${artistName}`
+        );
       }
       setLoading(false);
     };
-    generate();
+    init();
   }, []);
 
   const copy = () => {
@@ -364,9 +424,8 @@ function StepEmail({ session, briefText, parsed, tracks, onBack, onSaved }) {
         method: 'Email',
         status: 'Sent',
         notes: briefText,
-        // Store pitched track IDs — add a pitches_tracks join table or store as array
-        // depending on your schema. Simplest: store track titles in notes.
         track_title: tracks.map(t => (t.data || t).title || 'Untitled').join(', '),
+        playlist_token: playlistId ? shareUrl.split('/p/')[1] : null,
       });
       if (!error && data?.[0]) onSaved(data[0]);
       else onSaved({ id: Date.now(), supervisor_name: supervisorName, company, status: 'Sent' });
@@ -422,6 +481,26 @@ function StepEmail({ session, briefText, parsed, tracks, onBack, onSaved }) {
           <label className="text-xs text-gray-400 font-medium">To (email)</label>
           <input value={supervisorEmail} onChange={e => setSupervisorEmail(e.target.value)} placeholder="supervisor@company.com" className={inp} type="email" />
         </div>
+
+        {/* Share link */}
+        {shareUrl ? (
+          <div className="bg-indigo-950/40 border border-indigo-800/40 rounded-xl p-3 flex items-center justify-between gap-3">
+            <div className="flex-1 min-w-0">
+              <p className="text-xs text-indigo-300 font-medium mb-0.5">Shareable playlist link</p>
+              <p className="text-xs text-indigo-400 truncate">{shareUrl}</p>
+            </div>
+            <button
+              onClick={() => { navigator.clipboard.writeText(shareUrl).catch(() => {}); }}
+              className="flex-shrink-0 text-xs bg-indigo-900/60 hover:bg-indigo-800/60 text-indigo-300 px-2.5 py-1.5 rounded-lg transition-colors"
+            >
+              Copy
+            </button>
+          </div>
+        ) : loading ? (
+          <div className="bg-gray-900 border border-gray-800 rounded-xl p-3">
+            <p className="text-xs text-gray-600">Generating share link…</p>
+          </div>
+        ) : null}
 
         {/* Tracks pitched */}
         <div className="bg-gray-900 border border-gray-800 rounded-xl p-3">

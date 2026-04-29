@@ -6,6 +6,7 @@ import { analyzeAudio } from "./lib/audioAnalysis";
 import { exportTracksToCsv } from "./lib/csvExport";
 import BulkEditModal from "./components/BulkEditModal";
 import SpotifyImportModal from "./components/SpotifyImportModal";
+import BriefBoard from "./BriefBoard";
 
 const MOODS = ['Dark','Uplifting','Melancholic','Intense','Calm','Dreamy','Aggressive','Romantic','Nostalgic','Mysterious','Triumphant','Tense','Playful','Epic','Intimate','Cinematic','Ethereal','Gritty','Anthemic','Hopeful'];
 const INSTRUMENTS = ['Acoustic Guitar','Electric Guitar','Bass Guitar','Drums','Piano','Keys/Organ','Strings','Synth/Pad','Brass','Woodwinds','Choir','Full Orchestra','Electronic/808','Percussion','Violin','Cello','Trumpet','Saxophone','Flute','Banjo','Mandolin','Ukulele','Harp','Harmonica'];
@@ -1053,7 +1054,9 @@ function LinksManager({ session }) {
     </div>
   );
 }
-function BriefBoard({ session, projects }) {
+// Old BriefBoard (supervisor marketplace) removed — replaced by BriefBoard.jsx
+
+function _OldBriefBoard_REMOVED({ session, projects }) {
   const [briefs, setBriefs] = useState([]);
   const [loaded, setLoaded] = useState(false);
   const [filters, setFilters] = useState({ genre: '', mood: '', project_type: '', bpm_min: '', bpm_max: '' });
@@ -1341,7 +1344,7 @@ console.log('briefs result', data, 'now', now);
   );
 }
 export default function App({ session }) {
-  const [tab, setTab] = useState('projects');
+  const [tab, setTab] = useState('home');
   const [view, setView] = useState('dashboard');
   const [projects, setProjects] = useState([]);
   const [projId, setProjId] = useState(null);
@@ -1743,15 +1746,14 @@ if(showAccount) return <AccountSettings session={session} onBack={() => setShowA
           <div className="flex items-center gap-3">
             <span className="text-sm font-bold text-white">FSM</span>
             <div className="flex gap-1">
-{['projects','pitches','links','briefs'].map(t => (                <button key={t} onClick={() => setTab(t)}
+{['home','projects','pitches','links'].map(t => (                <button key={t} onClick={() => setTab(t)}
                   className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-colors ${tab===t?'bg-gray-800 text-white':'text-gray-500 hover:text-gray-300'}`}>
-{t==='projects'?'Projects':t==='pitches'?'Pitches':t==='links'?'Links':'Briefs'}                </button>
+{t==='home'?'Briefs':t==='projects'?'Projects':t==='pitches'?'Pitches':'Links'}                </button>
               ))}
             </div>
           </div>
           <div className="flex items-center gap-2">
-            {tab==='projects' && (
-              <button onClick={() => { setShowNewChooser(true); setShowAddProj(false); }}
+            {tab==='projects' && (              <button onClick={() => { setShowNewChooser(true); setShowAddProj(false); }}
                 className="bg-indigo-600 hover:bg-indigo-500 text-white px-3 py-1.5 rounded-lg text-xs font-semibold transition-colors">
                 + New
               </button>
@@ -1778,9 +1780,9 @@ if(showAccount) return <AccountSettings session={session} onBack={() => setShowA
         </div>
       )}
 
+      {view==='dashboard' && tab==='home' && <BriefBoard session={session} />}
       {view==='dashboard' && tab==='pitches' && <PitchManager session={session} />}
 {view==='dashboard' && tab==='links' && <LinksManager session={session} />}
-{view==='dashboard' && tab==='briefs' && <BriefBoard session={session} projects={projects} />}
       {view==='dashboard' && tab==='projects' && (
         <div className="px-4 py-6 max-w-4xl mx-auto">
           {showNewChooser && (

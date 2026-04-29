@@ -1344,14 +1344,17 @@ console.log('briefs result', data, 'now', now);
   );
 }
 export default function App({ session }) {
-  const [tab, setTab] = useState(() => localStorage.getItem('fsm_tab') || 'home');
-  const [view, setView] = useState(() => {
+  const [tab, _setTab] = useState(() => localStorage.getItem('fsm_tab') || 'home');
+  const [view, _setView] = useState(() => {
     const v = localStorage.getItem('fsm_view');
-    // Don't restore track-edit view — drop back to project list
     return v === 'track' ? 'project' : (v || 'dashboard');
   });
   const [projects, setProjects] = useState([]);
-  const [projId, setProjId] = useState(() => localStorage.getItem('fsm_projId') || null);
+  const [projId, _setProjId] = useState(() => localStorage.getItem('fsm_projId') || null);
+  // Synchronous wrappers — guaranteed to save before iOS kills the page
+  const setTab = (v) => { localStorage.setItem('fsm_tab', v); _setTab(v); };
+  const setView = (v) => { localStorage.setItem('fsm_view', v); _setView(v); };
+  const setProjId = (v) => { if (v) localStorage.setItem('fsm_projId', v); _setProjId(v); };
   const [trackData, setTrackData] = useState(null);
   const [trackId, setTrackId] = useState(null);
   const [parentTrackId, setParentTrackId] = useState(null);
@@ -1378,10 +1381,7 @@ const [showSpotify, setShowSpotify] = useState(false);const [sharePrompt, setSha
       .then(({data}) => {if(data)setProjects(data.map(p=>({...p,tracks:p.tracks||[]})));setLoaded(true);});
   }, []);
 
-  // Persist nav state so returning from another tab/app restores position
-  useEffect(() => { localStorage.setItem('fsm_tab', tab); }, [tab]);
-  useEffect(() => { localStorage.setItem('fsm_view', view); }, [view]);
-  useEffect(() => { if (projId) localStorage.setItem('fsm_projId', projId); }, [projId]);
+
 
   const proj = projects.find(p=>p.id===projId);
   // Tracks selected across all projects (cross-project selection)

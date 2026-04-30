@@ -14,6 +14,9 @@ module.exports = async function handler(req, res) {
     const message = await client.messages.create({
       model: 'claude-haiku-4-5-20251001',
       max_tokens: 1024,
+      // temperature=0 → deterministic parsing. Same brief always produces the
+      // same JSON, so the same brief always produces the same match scores.
+      temperature: 0,
       messages: [{
         role: 'user',
         content: `You are a music supervisor assistant. Analyze this sync licensing brief and extract structured musical requirements.

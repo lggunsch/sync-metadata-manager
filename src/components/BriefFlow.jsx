@@ -44,93 +44,96 @@ const inp = "bg-gray-800 border border-gray-700 rounded-lg px-3 py-2 text-sm tex
 // caller via filtering, not by returning a sentinel score here.
 function scoreTrack(track, parsed) {
   const d = track.data || track;
+
+  if (parsed.explicit === false && d.explicit === true) return { score: 0, confidence: 'high' };
+
   let earned = 0;
   let possible = 0;
+  let dataPoints = 0; // track fields with real (non-default) data
 
-  // BPM (weight: 25). Skip if track has no BPM.
+  // BPM
   if (parsed.bpmMin != null && parsed.bpmMax != null) {
+    possible += 25;
     const bpm = parseFloat(d.bpm);
-    if (!isNaN(bpm)) {
-      possible += 25;
+    if (!isNaN(bpm) && bpm > 0) {
+      dataPoints++;
       if (bpm >= parsed.bpmMin && bpm <= parsed.bpmMax) earned += 25;
       else if (bpm >= parsed.bpmMin - 10 && bpm <= parsed.bpmMax + 10) earned += 10;
     }
   }
 
-  // Moods (10 per matched brief mood, up to 3). Exact match against the
-  // canonical mood list — no substring matching to avoid false positives.
-  // Skip if track has no moods tagged.
-  const briefMoods = (parsed.moods || []).map(m => String(m).toLowerCase().trim()).filter(Boolean);
-  const trackMoods = (d.moods || []).map(m => String(m).toLowerCase().trim()).filter(Boolean);
-  if (briefMoods.length > 0 && trackMoods.length > 0) {
+  // Moods
+  const briefMoods = (parsed.moods || []).map(m => m.toLowerCase());
+  if (briefMoods.length > 0) {
     const cap = Math.min(briefMoods.length, 3);
     possible += cap * 10;
-    // Count distinct brief moods that have at least one track-mood hit.
-    const hits = briefMoods.filter(bm => trackMoods.includes(bm)).length;
-    earned += Math.min(hits, cap) * 10;
+    const trackMoods = (d.moods || []).map(m => m.toLowerCase());
+    if (trackMoods.length > 0) {
+      dataPoints++;
+      const hits = trackMoods.filter(m => briefMoods.some(bm => bm.includes(m) || m.includes(bm))).length;
+      earned += Math.min(hits, cap) * 10;
+    }
   }
 
-  // Genre (weight: 20). Substring match in either direction, but only when
-  // both sides are non-empty — fixes the empty-string-matches-everything bug.
-  // Skip if track has no genre.
-  const briefGenres = (parsed.genres || []).map(g => String(g).toLowerCase().trim()).filter(Boolean);
-  const trackGenre = String(d.genre || '').toLowerCase().trim();
-  if (briefGenres.length > 0 && trackGenre) {
+  // Genre
+  const briefGenres = (parsed.genres || []).map(g => g.toLowerCase());
+  if (briefGenres.length > 0) {
     possible += 20;
-    if (briefGenres.some(g => trackGenre.includes(g) || g.includes(trackGenre))) {
-      earned += 20;
+    const trackGenre = (d.genre || '').toLowerCase();
+    if (trackGenre) {
+      dataPoints++;
+      if (briefGenres.some(g => trackGenre.includes(g) || g.includes(trackGenre))) earned += 20;
     }
   }
 
-  // Vocals (weight: 15). Only score when brief is a definitive Yes/No —
-  // "Either" means no constraint, so no scoring. Skip if track hasVocals
-  // isn't filled in. "Instrumental Version Available" counts as 'No' for
-  // the purpose of matching a "No vocals" brief.
-  if (parsed.vocalsWanted === 'Yes' || parsed.vocalsWanted === 'No') {
-    const tv = d.hasVocals;
-    if (tv === 'Yes' || tv === 'No' || tv === 'Instrumental Version Available') {
-      possible += 15;
-      if (parsed.vocalsWanted === 'Yes' && tv === 'Yes') earned += 15;
-      else if (parsed.vocalsWanted === 'No' && (tv === 'No' || tv === 'Instrumental Version Available')) earned += 15;
+  // Vocals
+  if (parsed.vocalsWanted != null) {
+    possible += 15;
+    if (d.hasVocals) {
+      dataPoints++;
+      if (parsed.vocalsWanted === 'No' && d.hasVocals === 'No') earned += 15;
+      else if (parsed.vocalsWanted === 'Yes' && d.hasVocals === 'Yes') earned += 15;
     }
   }
 
-  // Energy (weight: 10). Skip if track has no energy value.
+  // Energy — skip default 50
   if (parsed.energyMin != null && parsed.energyMax != null) {
     const e = parseFloat(d.energy);
-    if (!isNaN(e)) {
+    if (!isNaN(e) && e !== 50) {
       possible += 10;
+      dataPoints++;
       if (e >= parsed.energyMin && e <= parsed.energyMax) earned += 10;
     }
   }
 
-  // Key (weight: 8). Skip if track has no key.
+  // Key
   if (parsed.preferredKeys?.length) {
-    const trackKey = String(d.key || '').toLowerCase().trim();
+    possible += 8;
+    const trackKey = (d.key || '').toLowerCase();
     if (trackKey) {
-      possible += 8;
-      if (parsed.preferredKeys.some(k => k && trackKey.includes(String(k).toLowerCase()))) {
-        earned += 8;
-      }
+      dataPoints++;
+      if (parsed.preferredKeys.some(k => trackKey.includes(k.toLowerCase()))) earned += 8;
     }
   }
 
-  // Themes (6 per match, up to 2). Track stores themes as a comma-separated
-  // string; substring search is fine here. Skip if track has no themes.
-  const briefThemes = (parsed.themes || []).map(t => String(t).toLowerCase().trim()).filter(Boolean);
-  const trackThemesStr = String(d.themes || '').toLowerCase();
-  if (briefThemes.length > 0 && trackThemesStr) {
+  // Themes
+  const briefThemes = (parsed.themes || []).map(t => t.toLowerCase());
+  if (briefThemes.length > 0) {
     const cap = Math.min(briefThemes.length, 2);
     possible += cap * 6;
-    const hits = briefThemes.filter(t => trackThemesStr.includes(t)).length;
-    earned += Math.min(hits, cap) * 6;
+    const trackThemes = (d.themes || '').toLowerCase();
+    if (trackThemes) {
+      dataPoints++;
+      const hits = briefThemes.filter(t => trackThemes.includes(t)).length;
+      earned += Math.min(hits, cap) * 6;
+    }
   }
 
-  // No comparable criteria between brief and track — return neutral.
-  if (possible === 0) return 50;
+  if (possible === 0) return { score: 50, confidence: 'low' };
 
-  // Honest 0–100 range. No floor, no ceiling.
-  return Math.round((earned / possible) * 100);
+  const score = Math.max(5, Math.min(99, Math.round((earned / possible) * 100)));
+  const confidence = dataPoints >= 4 ? 'high' : dataPoints >= 2 ? 'medium' : 'low';
+  return { score, confidence };
 }
 
 // ── MatchScore bar ────────────────────────────────────────────────────────────
@@ -335,6 +338,13 @@ function StepResults({ parsed, ranked, onGenerateEmail, onBack }) {
           );
         })}
       </div>
+      <MatchScore score={track._score} />
+{track._confidence === 'low' && (
+  <p className="text-xs text-yellow-600 mt-1">⚠ Limited metadata — fill in more track info for a better score</p>
+)}
+{track._confidence === 'medium' && (
+  <p className="text-xs text-gray-600 mt-1">Partial match data</p>
+)}
 
       {/* CTA */}
       <div className="p-4 border-t border-gray-800/60">
@@ -642,9 +652,12 @@ export default function BriefFlow({ session, onClose, onSaved }) {
 
       // 3. Score, filter explicit if brief requires, then rank
       const scored = allTracks
-        .map(t => ({ ...t, _score: scoreTrack(t, p || {}) }))
-        .filter(t => !(p?.explicit === false && (t.data || t).explicit === true))
-        .sort((a, b) => b._score - a._score);
+  .map(t => {
+    const { score, confidence } = scoreTrack(t, p || {});
+    return { ...t, _score: score, _confidence: confidence };
+  })
+  .filter(t => !(p?.explicit === false && (t.data || t).explicit === true))
+  .sort((a, b) => b._score - a._score);
 
       setParsed(p);
       setRanked(scored);

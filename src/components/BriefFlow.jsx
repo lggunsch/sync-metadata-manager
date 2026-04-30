@@ -324,6 +324,13 @@ function StepResults({ parsed, ranked, onGenerateEmail, onBack }) {
                     {[d.genre, d.bpm ? `${d.bpm} BPM` : null, d.key].filter(Boolean).join(' · ')}
                   </p>
                   <MatchScore score={track._score} />
+                  <MatchScore score={track._score} />
+{track._confidence === 'low' && (
+  <p className="text-xs text-yellow-600 mt-1">⚠ Limited metadata — fill in more track info for a better score</p>
+)}
+{track._confidence === 'medium' && (
+  <p className="text-xs text-gray-600 mt-1">Partial match data</p>
+)}
                   <div className="flex flex-wrap gap-1.5 mt-2">
                     {(d.moods || []).slice(0, 3).map(m => (
                       <span key={m} className="text-xs bg-gray-800 text-gray-400 px-2 py-0.5 rounded-full">{m}</span>
@@ -338,13 +345,6 @@ function StepResults({ parsed, ranked, onGenerateEmail, onBack }) {
           );
         })}
       </div>
-      <MatchScore score={track._score} />
-{track._confidence === 'low' && (
-  <p className="text-xs text-yellow-600 mt-1">⚠ Limited metadata — fill in more track info for a better score</p>
-)}
-{track._confidence === 'medium' && (
-  <p className="text-xs text-gray-600 mt-1">Partial match data</p>
-)}
 
       {/* CTA */}
       <div className="p-4 border-t border-gray-800/60">

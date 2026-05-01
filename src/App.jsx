@@ -554,32 +554,64 @@ function ImportModal({ projects, session, onClose, onImported, defaultProjId, ex
   const [matchResults, setMatchResults] = useState([]);
   const fileRef = useRef();
 
-  const FSM_FIELDS = [
-  {value:'',label:'— Skip this column —'},
-  {value:'title',label:'Track Title'},
-  {value:'artist',label:'Artist'},
-  {value:'featuring',label:'Featuring'},
-  {value:'albumArtist',label:'Album Artist'},
-  {value:'trackNum',label:'Track Number'},
-  {value:'duration',label:'Duration'},
-  {value:'isrc',label:'ISRC'},
-  {value:'isni',label:'ISNI'},
-  {value:'ipi',label:'IPI'},
-  {value:'iswc',label:'ISWC'},
-  {value:'upc',label:'UPC/EAN'},
-  {value:'pro',label:'PRO'},
-  {value:'publisher',label:'Publisher'},
-  {value:'label',label:'Label'},
-  {value:'masterOwner',label:'Master Owner'},
-  {value:'copyrightYear',label:'Copyright Year'},
-  {value:'releaseDate',label:'Release Date'},
-  {value:'fileFormat',label:'File Format'},
-  {value:'sampleRate',label:'Sample Rate'},
-  {value:'bitDepth',label:'Bit Depth'},
-  {value:'contactName',label:'Contact Name'},
-  {value:'contactEmail',label:'Contact Email'},
-  {value:'contactPhone',label:'Contact Phone'},
-  {value:'comments',label:'Comments / Notes'},
+  const FSM_FIELD_GROUPS = [
+  { label: 'Basic', fields: [
+    {value:'title',label:'Track Title'},
+    {value:'artist',label:'Artist'},
+    {value:'featuring',label:'Featuring'},
+    {value:'albumArtist',label:'Album Artist'},
+    {value:'trackNum',label:'Track Number'},
+    {value:'duration',label:'Duration'},
+  ]},
+  { label: 'Musical', fields: [
+    {value:'genre',label:'Genre'},
+    {value:'subGenre',label:'Sub-Genre'},
+    {value:'bpm',label:'BPM'},
+    {value:'key',label:'Key'},
+    {value:'timeSig',label:'Time Signature'},
+    {value:'tempoFeel',label:'Tempo Feel'},
+    {value:'moods',label:'Moods'},
+    {value:'instruments',label:'Instruments'},
+    {value:'themes',label:'Themes / Keywords'},
+    {value:'hasVocals',label:'Has Vocals'},
+    {value:'vocalType',label:'Vocal Type'},
+    {value:'language',label:'Language'},
+    {value:'explicit',label:'Explicit'},
+  ]},
+  { label: 'Audio Features', fields: [
+    {value:'energy',label:'Energy'},
+    {value:'danceability',label:'Danceability'},
+    {value:'acousticness',label:'Acousticness'},
+    {value:'instrumentalness',label:'Instrumentalness'},
+  ]},
+  { label: 'Rights & IDs', fields: [
+    {value:'isrc',label:'ISRC'},
+    {value:'isni',label:'ISNI'},
+    {value:'ipi',label:'IPI'},
+    {value:'iswc',label:'ISWC'},
+    {value:'upc',label:'UPC/EAN'},
+    {value:'pro',label:'PRO'},
+    {value:'publisher',label:'Publisher'},
+    {value:'label',label:'Label'},
+    {value:'masterOwner',label:'Master Owner'},
+    {value:'copyrightYear',label:'Copyright Year'},
+    {value:'releaseDate',label:'Release Date'},
+  ]},
+  { label: 'Technical', fields: [
+    {value:'fileFormat',label:'File Format'},
+    {value:'sampleRate',label:'Sample Rate'},
+    {value:'bitDepth',label:'Bit Depth'},
+  ]},
+  { label: 'AI Disclosure', fields: [
+    {value:'aiAssisted',label:'AI Assisted'},
+    {value:'aiNotes',label:'AI Notes'},
+  ]},
+  { label: 'Contact', fields: [
+    {value:'contactName',label:'Contact Name'},
+    {value:'contactEmail',label:'Contact Email'},
+    {value:'contactPhone',label:'Contact Phone'},
+    {value:'comments',label:'Comments / Notes'},
+  ]},
 ];
 
   const parseFile = async (file) => {
@@ -757,19 +789,31 @@ setHeaders(hdrs); setRows(data); setMapping(autoMap); setStep('map');
               <span className="text-xs text-indigo-400 font-medium">{mappedCount} mapped</span>
             </div>
             <div className="flex flex-col gap-2">
-              {headers.map(h => (
-                <div key={h} className="flex items-center gap-3 bg-gray-800/30 rounded-lg p-3">
-                  <div className="flex-1 min-w-0">
-                    <p className="text-xs font-medium text-gray-300 truncate">{h}</p>
-                    {rows[0]?.[h] && <p className="text-xs text-gray-600 truncate mt-0.5">e.g. {String(rows[0][h])}</p>}
+              {headers.map(h => {
+                const takenByOthers = new Set(Object.entries(mapping).filter(([col, f]) => f && col !== h).map(([, f]) => f));
+                return (
+                  <div key={h} className="flex items-center gap-3 bg-gray-800/30 rounded-lg p-3">
+                    <div className="flex-1 min-w-0">
+                      <p className="text-xs font-medium text-gray-300 truncate">{h}</p>
+                      {rows[0]?.[h] && <p className="text-xs text-gray-600 truncate mt-0.5">e.g. {String(rows[0][h])}</p>}
+                    </div>
+                    <span className="text-gray-600 text-sm flex-shrink-0">→</span>
+                    <select value={mapping[h]||''} onChange={e => setMapping(m=>({...m,[h]:e.target.value}))}
+                      className="bg-gray-800 border border-gray-700 rounded-lg px-2 py-1.5 text-xs text-gray-100 focus:outline-none focus:border-indigo-500 flex-shrink-0 w-40">
+                      <option value="">— Skip —</option>
+                      {FSM_FIELD_GROUPS.map(group => {
+                        const available = group.fields.filter(f => !takenByOthers.has(f.value) || mapping[h] === f.value);
+                        if (!available.length) return null;
+                        return (
+                          <optgroup key={group.label} label={group.label}>
+                            {available.map(f => <option key={f.value} value={f.value}>{f.label}</option>)}
+                          </optgroup>
+                        );
+                      })}
+                    </select>
                   </div>
-                  <span className="text-gray-600 text-sm flex-shrink-0">→</span>
-                  <select value={mapping[h]||''} onChange={e => setMapping(m=>({...m,[h]:e.target.value}))}
-                    className="bg-gray-800 border border-gray-700 rounded-lg px-2 py-1.5 text-xs text-gray-100 focus:outline-none focus:border-indigo-500 flex-shrink-0 w-40">
-                    {FSM_FIELDS.map(f=><option key={f.value} value={f.value}>{f.label}</option>)}
-                  </select>
-                </div>
-              ))}
+                );
+              })}
             </div>
             <div className="bg-gray-800/50 border border-gray-700 rounded-lg px-3 py-2 flex items-center justify-between">
               <span className="text-xs text-gray-400">Importing into</span>

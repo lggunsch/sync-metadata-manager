@@ -517,7 +517,30 @@ function TrackForm({ trackData, sec, sf, tog, updOwner, addOwner, rmOwner, pct, 
   );
 }
 
-function ImportModal({ projects, session, onClose, onImported, defaultProjId }) {
+// ── Fuzzy title matching helpers ─────────────────────────────────────────────
+function normalizeTitle(s) {
+  return String(s || '').toLowerCase().replace(/[^a-z0-9 ]/g, '').replace(/\s+/g, ' ').trim();
+}
+function levenshtein(a, b) {
+  if (!a.length) return b.length;
+  if (!b.length) return a.length;
+  const dp = [];
+  for (let i = 0; i <= a.length; i++) dp[i] = [i];
+  for (let j = 0; j <= b.length; j++) dp[0][j] = j;
+  for (let i = 1; i <= a.length; i++)
+    for (let j = 1; j <= b.length; j++)
+      dp[i][j] = a[i-1] === b[j-1] ? dp[i-1][j-1] : 1 + Math.min(dp[i-1][j], dp[i][j-1], dp[i-1][j-1]);
+  return dp[a.length][b.length];
+}
+function titleSim(a, b) {
+  const na = normalizeTitle(a), nb = normalizeTitle(b);
+  if (!na || !nb) return 0;
+  if (na === nb) return 1;
+  const maxLen = Math.max(na.length, nb.length);
+  return 1 - levenshtein(na, nb) / maxLen;
+}
+
+function ImportModal({ projects, session, onClose, onImported, defaultProjId, existingTracks = [] }) {
   const [mode, setMode] = useState('single');
   const [targetProjId, setTargetProjId] = useState(defaultProjId || '');
   useEffect(() => {
@@ -528,6 +551,8 @@ function ImportModal({ projects, session, onClose, onImported, defaultProjId }) 
   const [mapping, setMapping] = useState({});
   const [step, setStep] = useState('upload');
   const [importing, setImporting] = useState(false);
+  const [matchResults, setMatchResults] = useState([]);
+  const fillMode = existingTracks.length > 0;
   const fileRef = useRef();
 
   const FSM_FIELDS = [
@@ -640,6 +665,53 @@ setHeaders(hdrs); setRows(data); setMapping(autoMap); setStep('map');
     setImporting(false); onImported(); onClose();
   };
 
+  const buildMatches = () => {
+    const titleCol = Object.entries(mapping).find(([, field]) => field === 'title')?.[0];
+    if (!titleCol) { doImport(); return; } // no title column — fall back to normal import
+    const activeRows = mode === 'single' ? [rows[0]] : rows;
+    const results = activeRows.map(row => {
+      const csvTitle = row[titleCol] || '';
+      const mappedData = applyMapping([row])[0];
+      const scores = existingTracks.map(t => ({
+        track: t,
+        score: titleSim(csvTitle, t.data?.title || ''),
+      })).sort((a, b) => b.score - a.score);
+      const best = scores[0];
+      const second = scores[1];
+      const ambiguous = best?.score >= 0.5 && second?.score >= 0.5 && (best.score - second.score) < 0.15 && best.score < 0.95;
+      return {
+        csvTitle,
+        mappedData,
+        bestMatch: best?.score >= 0.5 ? best.track : null,
+        bestScore: best?.score || 0,
+        ambiguous,
+        candidates: scores.filter(s => s.score >= 0.35).slice(0, 5),
+        userOverride: undefined, // undefined = use bestMatch, null = skip, id string = specific track
+      };
+    });
+    setMatchResults(results);
+    setStep('match');
+  };
+
+  const setMatchOverride = (idx, value) => {
+    setMatchResults(rs => rs.map((r, i) => i === idx ? { ...r, userOverride: value } : r));
+  };
+
+  const doFillImport = async () => {
+    setImporting(true);
+    for (const result of matchResults) {
+      const targetId = result.userOverride === undefined
+        ? result.bestMatch?.id
+        : result.userOverride === null ? null : result.userOverride;
+      if (!targetId) continue;
+      const existing = existingTracks.find(t => t.id === targetId);
+      if (!existing) continue;
+      const merged = { ...existing.data, ...result.mappedData };
+      await supabase.from('tracks').update({ data: merged }).eq('id', targetId);
+    }
+    setImporting(false); onImported(); onClose();
+  };
+
   const mappedCount = Object.values(mapping).filter(Boolean).length;
 
   return (
@@ -706,9 +778,72 @@ setHeaders(hdrs); setRows(data); setMapping(autoMap); setStep('map');
             </div>
             <div className="flex gap-2">
               <button onClick={() => setStep('upload')} className="bg-gray-800 hover:bg-gray-700 text-gray-400 px-4 py-2 rounded-lg text-sm transition-colors">← Back</button>
-              <button onClick={doImport} disabled={importing||!targetProjId}
+              <button onClick={fillMode ? buildMatches : doImport} disabled={importing||!targetProjId}
                 className="bg-indigo-600 hover:bg-indigo-500 disabled:opacity-50 text-white px-5 py-2 rounded-lg text-sm font-semibold transition-colors flex-1">
-                {importing?'Importing...':`Import ${mode==='single'?'1 track':rows.length+' tracks'}`}
+                {importing ? 'Importing...' : fillMode ? `Match tracks →` : `Import ${mode==='single'?'1 track':rows.length+' tracks'}`}
+              </button>
+            </div>
+          </>}
+          {step==='match' && <>
+            <div className="bg-gray-800/50 border border-gray-700 rounded-xl p-3 flex items-center justify-between">
+              <p className="text-xs text-gray-400">Matching {matchResults.length} CSV row{matchResults.length!==1?'s':''} to existing tracks by title</p>
+              <span className="text-xs text-indigo-400 font-medium">
+                {matchResults.filter(r => (r.userOverride === undefined ? r.bestMatch : r.userOverride) ).length} will update
+              </span>
+            </div>
+            <div className="flex flex-col gap-2">
+              {matchResults.map((r, i) => {
+                const resolvedId = r.userOverride === undefined ? r.bestMatch?.id : r.userOverride;
+                const isSkipped = resolvedId === null || resolvedId === undefined;
+                const needsReview = r.ambiguous && r.userOverride === undefined;
+                return (
+                  <div key={i} className={`rounded-lg p-3 border ${needsReview ? 'bg-yellow-900/10 border-yellow-700/50' : isSkipped ? 'bg-gray-800/20 border-gray-800' : 'bg-gray-800/30 border-gray-700'}`}>
+                    <div className="flex items-start gap-2 mb-2">
+                      <span className={`text-base flex-shrink-0 ${needsReview ? 'text-yellow-400' : isSkipped ? 'text-gray-600' : 'text-green-400'}`}>
+                        {needsReview ? '⚠' : isSkipped ? '✕' : '✓'}
+                      </span>
+                      <div className="flex-1 min-w-0">
+                        <p className="text-xs font-medium text-gray-200 truncate">"{r.csvTitle}"</p>
+                        {!isSkipped && !needsReview && (
+                          <p className="text-xs text-gray-500 mt-0.5">→ {existingTracks.find(t => t.id === resolvedId)?.data?.title || resolvedId}</p>
+                        )}
+                        {isSkipped && r.userOverride !== null && (
+                          <p className="text-xs text-gray-600 mt-0.5">No match found — will be skipped</p>
+                        )}
+                        {r.userOverride === null && (
+                          <p className="text-xs text-gray-600 mt-0.5">Skipped</p>
+                        )}
+                        {needsReview && (
+                          <p className="text-xs text-yellow-600 mt-0.5">Ambiguous match — please confirm</p>
+                        )}
+                      </div>
+                      <button onClick={() => setMatchOverride(i, r.userOverride === null ? undefined : null)}
+                        className="text-xs text-gray-600 hover:text-gray-400 flex-shrink-0 px-2 py-0.5 rounded border border-gray-700 hover:border-gray-500 transition-colors">
+                        {r.userOverride === null ? 'Restore' : 'Skip'}
+                      </button>
+                    </div>
+                    {(r.ambiguous || needsReview) && r.userOverride !== null && (
+                      <select
+                        value={r.userOverride === undefined ? (r.bestMatch?.id || '') : r.userOverride}
+                        onChange={e => setMatchOverride(i, e.target.value || null)}
+                        className="bg-gray-800 border border-yellow-700/50 rounded-lg px-2 py-1.5 text-xs text-gray-100 focus:outline-none focus:border-indigo-500 w-full mt-1">
+                        <option value="">— Skip this row —</option>
+                        {r.candidates.map(c => (
+                          <option key={c.track.id} value={c.track.id}>
+                            {c.track.data?.title || 'Untitled'} ({Math.round(c.score * 100)}% match)
+                          </option>
+                        ))}
+                      </select>
+                    )}
+                  </div>
+                );
+              })}
+            </div>
+            <div className="flex gap-2">
+              <button onClick={() => setStep('map')} className="bg-gray-800 hover:bg-gray-700 text-gray-400 px-4 py-2 rounded-lg text-sm transition-colors">← Back</button>
+              <button onClick={doFillImport} disabled={importing}
+                className="bg-indigo-600 hover:bg-indigo-500 disabled:opacity-50 text-white px-5 py-2 rounded-lg text-sm font-semibold transition-colors flex-1">
+                {importing ? 'Saving...' : `Fill from imports`}
               </button>
             </div>
           </>}
@@ -1703,7 +1838,7 @@ if(showAccount) return <AccountSettings session={session} onBack={() => setShowA
 
   return (
     <div className="min-h-screen bg-gray-950 text-gray-100 w-full overflow-x-hidden">
-{showImport && <ImportModal projects={projects} session={session} onClose={() => setShowImport(false)} onImported={reloadProjects} defaultProjId={projId} />}
+{showImport && <ImportModal projects={projects} session={session} onClose={() => setShowImport(false)} onImported={reloadProjects} defaultProjId={projId} existingTracks={proj?.tracks || []} />}
 {showBulkEdit && <BulkEditModal count={exportSel.size} onClose={() => setShowBulkEdit(false)} onSave={handleBulkEdit} />}
 {showSpotify && <SpotifyImportModal onClose={() => setShowSpotify(false)} onImport={handleSpotifyImport} />}{shareLink && (
   <div className="fixed inset-0 bg-black/70 flex items-center justify-center z-50 p-4">

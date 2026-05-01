@@ -614,15 +614,39 @@ function ImportModal({ projects, session, onClose, onImported, defaultProjId, ex
   ]},
 ];
 
+  const parseCSVLine = (line) => {
+    const fields = [];
+    let i = 0;
+    while (i <= line.length) {
+      if (i === line.length) { fields.push(''); break; }
+      if (line[i] === '"') {
+        let val = ''; i++;
+        while (i < line.length) {
+          if (line[i] === '"' && line[i+1] === '"') { val += '"'; i += 2; }
+          else if (line[i] === '"') { i++; break; }
+          else { val += line[i]; i++; }
+        }
+        if (line[i] === ',') i++;
+        fields.push(val.trim());
+      } else {
+        const end = line.indexOf(',', i);
+        if (end === -1) { fields.push(line.slice(i).trim()); break; }
+        fields.push(line.slice(i, end).trim());
+        i = end + 1;
+      }
+    }
+    return fields;
+  };
+
   const parseFile = async (file) => {
     const ext = file.name.split('.').pop().toLowerCase();
     let hdrs = [], data = [];
     if (ext === 'csv') {
       const text = await file.text();
       const lines = text.split('\n').filter(l => l.trim());
-      hdrs = lines[0].split(',').map(h => h.trim().replace(/^"|"$/g,''));
+      hdrs = parseCSVLine(lines[0]);
       data = lines.slice(1).map(line => {
-        const vals = line.split(',').map(v => v.trim().replace(/^"|"$/g,''));
+        const vals = parseCSVLine(line);
         return Object.fromEntries(hdrs.map((h,i) => [h, vals[i]||'']));
       }).filter(r => Object.values(r).some(v => v));
     } else if (ext==='xlsx'||ext==='xls') {

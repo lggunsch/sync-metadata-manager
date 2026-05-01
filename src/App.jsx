@@ -540,7 +540,7 @@ function titleSim(a, b) {
   return 1 - levenshtein(na, nb) / maxLen;
 }
 
-function ImportModal({ projects, session, onClose, onImported, defaultProjId, existingTracks = [] }) {
+function ImportModal({ projects, session, onClose, onImported, defaultProjId, existingTracks = [], fillMode = false }) {
   const [mode, setMode] = useState('single');
   const [targetProjId, setTargetProjId] = useState(defaultProjId || '');
   useEffect(() => {
@@ -552,7 +552,6 @@ function ImportModal({ projects, session, onClose, onImported, defaultProjId, ex
   const [step, setStep] = useState('upload');
   const [importing, setImporting] = useState(false);
   const [matchResults, setMatchResults] = useState([]);
-  const fillMode = existingTracks.length > 0;
   const fileRef = useRef();
 
   const FSM_FIELDS = [
@@ -719,21 +718,21 @@ setHeaders(hdrs); setRows(data); setMapping(autoMap); setStep('map');
       <div className="bg-gray-900 border border-gray-700 rounded-xl w-full max-w-2xl max-h-[85vh] flex flex-col">
         <div className="flex items-center justify-between p-4 border-b border-gray-800">
           <div>
-            <h2 className="text-sm font-semibold text-gray-100">Import Tracks from File</h2>
+            <h2 className="text-sm font-semibold text-gray-100">{fillMode ? 'Fill from Imports' : 'Import Tracks from File'}</h2>
             {step==='map' && <p className="text-xs text-gray-500 mt-0.5">Match your columns to FSM fields</p>}
           </div>
           <button onClick={onClose} className="text-gray-600 hover:text-gray-300 text-xl">×</button>
         </div>
         <div className="p-4 flex flex-col gap-4 overflow-y-auto flex-1">
           {step==='upload' && <>
-            <div className="flex gap-2">
+            {!fillMode && <div className="flex gap-2">
               {['single','bulk'].map(m => (
                 <button key={m} onClick={() => setMode(m)}
                   className={`px-3 py-2 rounded-lg text-xs font-medium border transition-colors flex-1 ${mode===m?'bg-indigo-600 border-indigo-500 text-white':'bg-gray-800 border-gray-700 text-gray-400'}`}>
                   {m==='single'?'Single Track':'Bulk Import'}
                 </button>
               ))}
-            </div>
+            </div>}
             {!defaultProjId && (
   <div className="flex flex-col gap-1">
     <label className="text-xs text-gray-400 font-medium">Import into project</label>
@@ -1500,6 +1499,7 @@ export default function App({ session }) {
   const [showNewChooser, setShowNewChooser] = useState(false);
   const [showAccount, setShowAccount] = useState(false);
   const [showImport, setShowImport] = useState(false);
+  const [showFillImport, setShowFillImport] = useState(false);
   const [showMenu, setShowMenu] = useState(false);
   const [draft, setDraft] = useState({name:'',artist:'',type:'Album'});
   const [sec, setSec] = useState(0);
@@ -1838,7 +1838,8 @@ if(showAccount) return <AccountSettings session={session} onBack={() => setShowA
 
   return (
     <div className="min-h-screen bg-gray-950 text-gray-100 w-full overflow-x-hidden">
-{showImport && <ImportModal projects={projects} session={session} onClose={() => setShowImport(false)} onImported={reloadProjects} defaultProjId={projId} existingTracks={proj?.tracks || []} />}
+{showImport && <ImportModal projects={projects} session={session} onClose={() => setShowImport(false)} onImported={reloadProjects} defaultProjId={projId} />}
+{showFillImport && <ImportModal projects={projects} session={session} onClose={() => setShowFillImport(false)} onImported={reloadProjects} defaultProjId={projId} existingTracks={proj?.tracks || []} fillMode={true} />}
 {showBulkEdit && <BulkEditModal count={exportSel.size} onClose={() => setShowBulkEdit(false)} onSave={handleBulkEdit} />}
 {showSpotify && <SpotifyImportModal onClose={() => setShowSpotify(false)} onImport={handleSpotifyImport} />}{shareLink && (
   <div className="fixed inset-0 bg-black/70 flex items-center justify-center z-50 p-4">
@@ -2026,6 +2027,7 @@ if(showAccount) return <AccountSettings session={session} onBack={() => setShowA
             </div>
             <div className="flex gap-2 flex-shrink-0">
               <button onClick={() => exportTracksToCsv(proj?.tracks || [], `${proj?.name || 'tracks'}.csv`)} disabled={!proj?.tracks?.length} className="bg-gray-800 hover:bg-gray-700 disabled:opacity-40 disabled:cursor-not-allowed text-gray-300 px-3 py-2 rounded-lg text-xs transition-colors">Export All</button>
+              {proj?.tracks?.length > 0 && <button onClick={() => setShowFillImport(true)} className="bg-gray-800 hover:bg-gray-700 text-gray-300 px-3 py-2 rounded-lg text-xs transition-colors">Fill from imports</button>}
               <button onClick={addTrack} className="bg-indigo-600 hover:bg-indigo-500 text-white px-3 py-2 rounded-lg text-xs font-semibold transition-colors">+ Track</button>
             </div>
           </div>

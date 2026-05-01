@@ -699,7 +699,7 @@ setHeaders(hdrs); setRows(data); setMapping(autoMap); setStep('map');
   const buildMatches = () => {
     const titleCol = Object.entries(mapping).find(([, field]) => field === 'title')?.[0];
     if (!titleCol) { doImport(); return; } // no title column — fall back to normal import
-    const activeRows = mode === 'single' ? [rows[0]] : rows;
+    const activeRows = fillMode ? rows : (mode === 'single' ? [rows[0]] : rows);
     const results = activeRows.map(row => {
       const csvTitle = row[titleCol] || '';
       const mappedData = applyMapping([row])[0];

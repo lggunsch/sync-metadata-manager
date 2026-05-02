@@ -48,7 +48,8 @@ Guidelines:
 - Professional but warm, human tone — not stiff or corporate
 - Under 200 words
 - Mention 1–2 specific details from the brief to show you read it carefully
-- Reference the track titles naturally
+- When describing tracks, give each track its own paragraph — do not lump them together in a single sentence or paragraph
+- Each track paragraph should start with the track title in quotes (e.g. "Signal Fire"), followed by its description. No asterisks or bold formatting around track names — just quotation marks
 - Include this shareable playlist link naturally in the body (e.g. "You can stream them here: URL"): ${shareUrl || ''}
 - End with a clear CTA (happy to send WAV files, stems, full metadata)
 - Do NOT write a subject line — just the email body

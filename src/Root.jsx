@@ -5,7 +5,6 @@ import Auth from "./Auth";
 import Paywall from "./Paywall";
 import ResetPassword from "./ResetPassword";
 import PublicPlaylist from "./PublicPlaylist";
-import SupervisorApp from "./SupervisorApp";
 import AdminPanel from "./AdminPanel";
 
 export default function Root() {

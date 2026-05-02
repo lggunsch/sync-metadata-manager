@@ -89,7 +89,6 @@ if (pathParts[1] === 'admin') {
     </div>
   );
   if (!session) return <Auth />;
-  //if (role === 'supervisor') return <SupervisorApp session={session} />;
-  //if (!hasAccess) return <Paywall session={session} />;
+  
   return <App session={session} />;
 }

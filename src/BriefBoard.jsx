@@ -55,6 +55,12 @@ export default function BriefBoard({ session }) {
     setShowFlow(false);
   };
 
+  const deletePitch = async (id) => {
+    if (!window.confirm('Delete this pitch? This can\'t be undone.')) return;
+    await supabase.from('pitches').delete().eq('id', id);
+    setPitches(prev => prev.filter(p => p.id !== id));
+  };
+
   const fmt = (ts) => {
     if (!ts) return '';
     const d = new Date(ts);
@@ -149,7 +155,14 @@ export default function BriefBoard({ session }) {
                       {p.status}
                     </span>
                   </div>
-                  <span className="text-xs text-gray-600 flex-shrink-0">{fmt(p.created_at)}</span>
+                  <div className="flex items-center gap-2 flex-shrink-0">
+                    <span className="text-xs text-gray-600">{fmt(p.created_at)}</span>
+                    <button
+                      onClick={() => deletePitch(p.id)}
+                      className="text-gray-700 hover:text-red-400 transition-colors text-lg leading-none"
+                      title="Delete pitch"
+                    >×</button>
+                  </div>
                 </div>
                 {p.company && (
                   <p className="text-xs text-gray-500">{p.company}{p.project_name ? ` · ${p.project_name}` : ''}</p>

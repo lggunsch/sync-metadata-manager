@@ -4,7 +4,7 @@ import { useState } from "react";
 const MOODS = ['Dark','Uplifting','Melancholic','Intense','Calm','Dreamy','Aggressive','Romantic','Nostalgic','Mysterious','Triumphant','Tense','Playful','Epic','Intimate','Cinematic','Ethereal','Gritty','Anthemic','Hopeful'];
 const INSTRUMENTS = ['Acoustic Guitar','Electric Guitar','Bass Guitar','Drums','Piano','Keys/Organ','Strings','Synth/Pad','Brass','Woodwinds','Choir','Full Orchestra','Electronic/808','Percussion','Violin','Cello','Trumpet','Saxophone','Flute','Banjo','Mandolin','Ukulele','Harp','Harmonica'];
 
-const inpClass = "bg-gray-800 border border-gray-700 rounded-lg px-3 py-2 text-sm text-gray-100 placeholder-gray-600 focus:outline-none focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 w-full";
+const inpClass = "bg-gray-800 border border-gray-700 rounded-lg px-3 py-2 text-sm text-gray-100 placeholder-gray-600 focus:outline-none focus:border-brand-yellow/50 focus:ring-1 focus:ring-brand-yellow w-full";
 
 function FormInput({ label, value, onChange }) {
   return (
@@ -20,7 +20,7 @@ function TagPicker({ options, selected, onToggle }) {
     <div className="flex flex-wrap gap-2">
       {options.map(o => (
         <button key={o} onClick={() => onToggle(o)} type="button"
-          className={`px-3 py-1 rounded-full text-xs font-medium border transition-colors ${selected.includes(o) ? 'bg-indigo-600 border-indigo-500 text-white' : 'bg-gray-800 border-gray-700 text-gray-400 hover:border-gray-500'}`}>
+          className={`px-3 py-1 rounded-full text-xs font-medium border transition-colors ${selected.includes(o) ? 'bg-brand-yellow border-brand-yellow/50 text-brand-navy' : 'bg-gray-800 border-gray-700 text-gray-400 hover:border-gray-500'}`}>
           {o}
         </button>
       ))}
@@ -95,7 +95,7 @@ export default function BulkEditModal({ count, onClose, onSave }) {
         </div>
         <div className="p-4 border-t border-gray-800">
           <button onClick={handleSave} disabled={dirtyCount === 0}
-            className="bg-indigo-600 hover:bg-indigo-500 disabled:opacity-50 disabled:cursor-not-allowed text-white w-full py-2.5 rounded-lg text-sm font-semibold transition-colors">
+            className="bg-brand-yellow hover:bg-brand-yellow disabled:opacity-50 disabled:cursor-not-allowed text-brand-navy w-full py-2.5 rounded-lg text-sm font-semibold transition-colors">
             Apply {dirtyCount} field{dirtyCount === 1 ? '' : 's'} to {count} track{count === 1 ? '' : 's'}
           </button>
         </div>

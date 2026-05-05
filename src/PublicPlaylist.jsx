@@ -43,11 +43,11 @@ function AudioPlayer({ url }) {
   return (
     <div className="flex items-center gap-3 bg-gray-800/50 border border-gray-700 rounded-lg px-3 py-2 mt-3">
       <audio ref={audioRef} src={url} onTimeUpdate={onTimeUpdate} onLoadedMetadata={onLoadedMetadata} onEnded={onEnded} />
-      <button onClick={toggle} className="text-indigo-400 hover:text-indigo-300 flex-shrink-0 w-7 h-7 flex items-center justify-center text-base">
+      <button onClick={toggle} className="text-brand-yellow/75 hover:text-brand-yellow flex-shrink-0 w-7 h-7 flex items-center justify-center text-base">
         {playing ? '⏸' : '▶'}
       </button>
       <div className="flex-1 h-1.5 bg-gray-700 rounded-full cursor-pointer" onClick={seek}>
-        <div className="h-1.5 bg-indigo-500 rounded-full transition-all" style={{ width: duration ? `${(progress / duration) * 100}%` : '0%' }} />
+        <div className="h-1.5 bg-brand-yellow rounded-full transition-all" style={{ width: duration ? `${(progress / duration) * 100}%` : '0%' }} />
       </div>
       <span className="text-xs text-gray-500 flex-shrink-0 tabular-nums">{fmt(progress)} / {fmt(duration)}</span>
     </div>
@@ -178,7 +178,7 @@ export default function PublicPlaylist({ token }) {
           </div>
           <button
             onClick={() => downloadMetadataPDF(tracks, playlist.name)}
-            className="text-xs text-indigo-400 hover:text-indigo-300 border border-indigo-800 rounded-lg px-3 py-1.5 transition-colors flex-shrink-0"
+            className="text-xs text-brand-yellow/75 hover:text-brand-yellow border border-brand-yellow/15 rounded-lg px-3 py-1.5 transition-colors flex-shrink-0"
           >
             Download Metadata
           </button>
@@ -209,7 +209,7 @@ export default function PublicPlaylist({ token }) {
                   {d.bpm && <span className="text-xs text-gray-600 hidden sm:block">{d.bpm} BPM</span>}
                   {d.key && <span className="text-xs text-gray-600 hidden sm:block">{d.key}</span>}
                   {d.genre && <span className="text-xs text-gray-600 hidden sm:block">{d.genre}</span>}
-                  {d.audioUrl && <span className="text-xs text-indigo-400">♪</span>}
+                  {d.audioUrl && <span className="text-xs text-brand-yellow/75">♪</span>}
                   <span className="text-gray-600 text-sm">{isOpen ? '↑' : '↓'}</span>
                 </div>
               </div>
@@ -221,7 +221,7 @@ export default function PublicPlaylist({ token }) {
                       <AudioPlayer url={d.audioUrl} />
                       <button
                         onClick={() => downloadMp3WithTags(d.audioUrl, d, (d.title || 'track') + '.mp3')}
-                        className="text-xs text-indigo-400 hover:text-indigo-300 transition-colors text-left w-fit"
+                        className="text-xs text-brand-yellow/75 hover:text-brand-yellow transition-colors text-left w-fit"
                       >
                         Download MP3
                       </button>
@@ -239,7 +239,7 @@ export default function PublicPlaylist({ token }) {
                         link.click();
                         URL.revokeObjectURL(blobUrl);
                       }}
-                      className="text-xs text-indigo-400 hover:text-indigo-300 transition-colors text-left w-fit"
+                      className="text-xs text-brand-yellow/75 hover:text-brand-yellow transition-colors text-left w-fit"
                     >
                       📦 Download Stems
                     </button>
@@ -299,7 +299,7 @@ export default function PublicPlaylist({ token }) {
                       <p className="text-xs text-gray-500 mb-1">Contact</p>
                       {d.contactName && <p className="text-xs text-gray-300">{d.contactName}</p>}
                       {d.contactEmail && (
-                        <a href={`mailto:${d.contactEmail}`} className="text-xs text-indigo-400 hover:text-indigo-300">
+                        <a href={`mailto:${d.contactEmail}`} className="text-xs text-brand-yellow/75 hover:text-brand-yellow">
                           {d.contactEmail}
                         </a>
                       )}

@@ -63,15 +63,15 @@ export default function Paywall({ session }) {
               ))}
             </ul>
             <button onClick={() => checkout(MONTHLY_PRICE_ID)} disabled={!!loading}
-              className="w-full bg-indigo-600 hover:bg-indigo-500 disabled:opacity-50 text-white py-3 rounded-lg text-sm font-semibold transition-colors">
+              className="w-full bg-brand-yellow hover:bg-brand-yellow disabled:opacity-50 text-brand-navy py-3 rounded-lg text-sm font-semibold transition-colors">
               {loading === MONTHLY_PRICE_ID ? 'Loading...' : 'Start Free Trial'}
             </button>
           </div>
 
           {/* Lifetime */}
-          <div className="bg-gray-900 border border-indigo-500 rounded-xl p-6 relative">
+          <div className="bg-gray-900 border border-brand-yellow/50 rounded-xl p-6 relative">
             <div className="absolute -top-3 left-1/2 -translate-x-1/2">
-              <span className="bg-indigo-600 text-white text-xs font-semibold px-3 py-1 rounded-full">Best Value</span>
+              <span className="bg-brand-yellow text-brand-navy text-xs font-semibold px-3 py-1 rounded-full">Best Value</span>
             </div>
             <div className="flex items-start justify-between mb-4">
               <div>
@@ -91,7 +91,7 @@ export default function Paywall({ session }) {
               ))}
             </ul>
             <button onClick={() => checkout(LIFETIME_PRICE_ID)} disabled={!!loading}
-              className="w-full bg-indigo-600 hover:bg-indigo-500 disabled:opacity-50 text-white py-3 rounded-lg text-sm font-semibold transition-colors">
+              className="w-full bg-brand-yellow hover:bg-brand-yellow disabled:opacity-50 text-brand-navy py-3 rounded-lg text-sm font-semibold transition-colors">
               {loading === LIFETIME_PRICE_ID ? 'Loading...' : 'Get Lifetime Access — $179'}
             </button>
           </div>

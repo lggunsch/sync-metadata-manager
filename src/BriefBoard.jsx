@@ -4,7 +4,7 @@ import BriefFlow from './components/BriefFlow';
 
 const STATUS_COLORS = {
   'Sent': 'bg-blue-900/50 text-blue-400',
-  'Viewed': 'bg-purple-900/50 text-purple-400',
+  'Viewed': 'bg-brand-yellow/10 text-brand-yellow/75',
   'In Consideration': 'bg-yellow-900/50 text-yellow-400',
   'Passed': 'bg-red-900/50 text-red-400',
   'Licensed': 'bg-green-900/50 text-green-400',
@@ -79,6 +79,7 @@ export default function BriefBoard({ session }) {
 
   return (
     <div className="flex flex-col min-h-screen bg-gray-950 pb-24">
+
       {/* Header */}
       <div className="px-4 pt-6 pb-4">
         <div className="flex items-center justify-between mb-1">
@@ -86,8 +87,8 @@ export default function BriefBoard({ session }) {
             <h1 className="text-lg font-bold text-gray-100 tracking-tight">Brief Board</h1>
             <p className="text-xs text-gray-500 mt-0.5">{today}</p>
           </div>
-          <div className="w-8 h-8 rounded-full bg-indigo-600 flex items-center justify-center">
-            <span className="text-xs font-bold text-white">{initials}</span>
+          <div className="w-8 h-8 rounded-full bg-brand-yellow flex items-center justify-center">
+            <span className="text-xs font-bold text-brand-navy">{initials}</span>
           </div>
         </div>
       </div>
@@ -96,7 +97,7 @@ export default function BriefBoard({ session }) {
       <div className="px-4 mb-5">
         <button
           onClick={() => setShowFlow(true)}
-          className="w-full bg-indigo-600 hover:bg-indigo-500 active:bg-indigo-700 text-white rounded-2xl p-5 text-left transition-all group"
+          className="w-full bg-brand-yellow/10 hover:bg-brand-yellow/15 border border-brand-yellow/30 active:bg-brand-yellow/20 text-left rounded-2xl p-5 transition-all group"
         >
           <div className="flex items-start justify-between mb-3">
             <div className="w-10 h-10 bg-white/15 rounded-xl flex items-center justify-center">
@@ -105,7 +106,7 @@ export default function BriefBoard({ session }) {
             <IconArrow />
           </div>
           <p className="text-white font-semibold text-base">New Brief</p>
-          <p className="text-indigo-200 text-xs mt-0.5 leading-relaxed">
+          <p className="text-brand-yellow text-xs mt-0.5 leading-relaxed">
             Paste a brief → FSM matches your catalog → draft your pitch
           </p>
         </button>
@@ -175,6 +176,7 @@ export default function BriefBoard({ session }) {
           </div>
         )}
       </div>
+
     </div>
   );
 }

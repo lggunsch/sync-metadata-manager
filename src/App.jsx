@@ -28,14 +28,14 @@ const PITCH_METHODS = ['Email','Submission Portal','In Person','Phone','Social M
 
 const STATUS_COLORS = {
   'Sent': 'bg-blue-900/50 text-blue-400',
-  'Viewed': 'bg-purple-900/50 text-purple-400',
+  'Viewed': 'bg-brand-yellow/10 text-brand-yellow/75',
   'In Consideration': 'bg-yellow-900/50 text-yellow-400',
   'Passed': 'bg-red-900/50 text-red-400',
   'Licensed': 'bg-green-900/50 text-green-400',
   'No Response': 'bg-gray-800 text-gray-500',
 };
 
-const inp = "bg-gray-800 border border-gray-700 rounded-lg px-3 py-2 text-sm text-gray-100 placeholder-gray-600 focus:outline-none focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 w-full";
+const inp = "bg-gray-800 border border-gray-700 rounded-lg px-3 py-2 text-sm text-gray-100 placeholder-gray-600 focus:outline-none focus:border-brand-yellow/50 focus:ring-1 focus:ring-brand-yellow w-full";
 
 // Format validators for industry-standard identifiers.
 // Each takes a value and returns null if valid, or an error message string if invalid.
@@ -152,11 +152,11 @@ function AudioPlayer({ url }) {
   return (
     <div className="flex items-center gap-3 bg-gray-800/50 border border-gray-700 rounded-lg px-3 py-2">
       <audio ref={audioRef} src={url} onTimeUpdate={onTimeUpdate} onLoadedMetadata={onLoadedMetadata} onEnded={onEnded} />
-      <button onClick={toggle} className="text-indigo-400 hover:text-indigo-300 flex-shrink-0 w-7 h-7 flex items-center justify-center">
+      <button onClick={toggle} className="text-brand-yellow/75 hover:text-brand-yellow flex-shrink-0 w-7 h-7 flex items-center justify-center">
         {playing ? '⏸' : '▶'}
       </button>
       <div className="flex-1 h-1.5 bg-gray-700 rounded-full cursor-pointer" onClick={seek}>
-        <div className="h-1.5 bg-indigo-500 rounded-full transition-all" style={{width: duration ? `${(progress/duration)*100}%` : '0%'}} />
+        <div className="h-1.5 bg-brand-yellow rounded-full transition-all" style={{width: duration ? `${(progress/duration)*100}%` : '0%'}} />
       </div>
       <span className="text-xs text-gray-500 flex-shrink-0 tabular-nums">{fmt(progress)} / {fmt(duration)}</span>
     </div>
@@ -282,9 +282,9 @@ function Slider({ label, value, onChange }) {
     <div className="flex flex-col gap-1">
       <div className="flex justify-between">
         <label className="text-xs text-gray-400 font-medium">{label}</label>
-        <span className="text-xs text-indigo-400 font-semibold">{value}</span>
+        <span className="text-xs text-brand-yellow/75 font-semibold">{value}</span>
       </div>
-      <input type="range" min="0" max="100" value={value} onChange={e => onChange(+e.target.value)} className="w-full accent-indigo-500 cursor-pointer" />
+      <input type="range" min="0" max="100" value={value} onChange={e => onChange(+e.target.value)} className="w-full accent-brand-yellow cursor-pointer" />
     </div>
   );
 }
@@ -295,7 +295,7 @@ function Tags({ label, options, selected, onToggle }) {
       <div className="flex flex-wrap gap-2">
         {options.map(o => (
           <button key={o} onClick={() => onToggle(o)}
-            className={`px-3 py-1 rounded-full text-xs font-medium border transition-colors ${selected.includes(o)?'bg-indigo-600 border-indigo-500 text-white':'bg-gray-800 border-gray-700 text-gray-400 hover:border-gray-500'}`}>{o}</button>
+            className={`px-3 py-1 rounded-full text-xs font-medium border transition-colors ${selected.includes(o)?'bg-brand-yellow border-brand-yellow/50 text-brand-navy':'bg-gray-800 border-gray-700 text-gray-400 hover:border-gray-500'}`}>{o}</button>
         ))}
       </div>
     </div>
@@ -319,7 +319,7 @@ function OwnerRows({ field, roles, trackData, updOwner, addOwner, rmOwner }) {
           </div>
         </div>
       ))}
-      <button onClick={() => addOwner(field)} className="text-xs text-indigo-400 hover:text-indigo-300 text-left w-fit">+ Add owner</button>
+      <button onClick={() => addOwner(field)} className="text-xs text-brand-yellow/75 hover:text-brand-yellow text-left w-fit">+ Add owner</button>
     </div>
   );
 }
@@ -361,7 +361,7 @@ function TrackForm({ trackData, sec, sf, tog, updOwner, addOwner, rmOwner, pct, 
             <div className="flex flex-col gap-2">
              <AudioPlayer url={trackData.audioUrl} />
               {audioAnalyzing && (
-                <div className="text-xs text-indigo-400 mt-2 flex items-center gap-2">
+                <div className="text-xs text-brand-yellow/75 mt-2 flex items-center gap-2">
                   <span className="inline-block w-3 h-3 border-2 border-indigo-400 border-t-transparent rounded-full animate-spin"></span>
                   Analyzing audio...
                 </div>
@@ -400,7 +400,7 @@ function TrackForm({ trackData, sec, sf, tog, updOwner, addOwner, rmOwner, pct, 
             <div className="flex items-center justify-between gap-2 bg-gray-800/50 border border-gray-700 rounded-lg px-3 py-2">
               <span className="text-xs text-gray-300 truncate">📦 Stems pack uploaded</span>
               <div className="flex gap-3 flex-shrink-0">
-                <a href={trackData.stemsUrl} download className="text-xs text-indigo-400 hover:text-indigo-300 transition-colors">
+                <a href={trackData.stemsUrl} download className="text-xs text-brand-yellow/75 hover:text-brand-yellow transition-colors">
                   Download
                 </a>
                 <button
@@ -466,7 +466,7 @@ function TrackForm({ trackData, sec, sf, tog, updOwner, addOwner, rmOwner, pct, 
           <Sel label="Language" value={trackData.language} onChange={v=>sf('language',v)} options={LANGUAGES} />
         </>}
         <div className="flex items-center gap-3">
-          <input type="checkbox" checked={trackData.explicit} onChange={e=>sf('explicit',e.target.checked)} className="w-5 h-5 accent-indigo-500 cursor-pointer" id="exp" />
+          <input type="checkbox" checked={trackData.explicit} onChange={e=>sf('explicit',e.target.checked)} className="w-5 h-5 accent-brand-yellow cursor-pointer" id="exp" />
           <label htmlFor="exp" className="text-sm text-gray-300 cursor-pointer">Explicit Content</label>
         </div>
       </div>}
@@ -801,7 +801,7 @@ setHeaders(hdrs); setRows(data); setMapping(autoMap); setStep('map');
             {!fillMode && <div className="flex gap-2">
               {['single','bulk'].map(m => (
                 <button key={m} onClick={() => setMode(m)}
-                  className={`px-3 py-2 rounded-lg text-xs font-medium border transition-colors flex-1 ${mode===m?'bg-indigo-600 border-indigo-500 text-white':'bg-gray-800 border-gray-700 text-gray-400'}`}>
+                  className={`px-3 py-2 rounded-lg text-xs font-medium border transition-colors flex-1 ${mode===m?'bg-brand-yellow border-brand-yellow/50 text-brand-navy':'bg-gray-800 border-gray-700 text-gray-400'}`}>
                   {m==='single'?'Single Track':'Bulk Import'}
                 </button>
               ))}
@@ -827,7 +827,7 @@ setHeaders(hdrs); setRows(data); setMapping(autoMap); setStep('map');
           {step==='map' && <>
             <div className="bg-gray-800/50 border border-gray-700 rounded-xl p-3 flex items-center justify-between">
               <p className="text-xs text-gray-400">{rows.length} row{rows.length!==1?'s':''} · {headers.length} columns</p>
-              <span className="text-xs text-indigo-400 font-medium">{mappedCount} mapped</span>
+              <span className="text-xs text-brand-yellow/75 font-medium">{mappedCount} mapped</span>
             </div>
             <div className="flex flex-col gap-2">
               {headers.map(h => {
@@ -840,7 +840,7 @@ setHeaders(hdrs); setRows(data); setMapping(autoMap); setStep('map');
                     </div>
                     <span className="text-gray-600 text-sm flex-shrink-0">→</span>
                     <select value={mapping[h]||''} onChange={e => setMapping(m=>({...m,[h]:e.target.value}))}
-                      className="bg-gray-800 border border-gray-700 rounded-lg px-2 py-1.5 text-xs text-gray-100 focus:outline-none focus:border-indigo-500 flex-shrink-0 w-40">
+                      className="bg-gray-800 border border-gray-700 rounded-lg px-2 py-1.5 text-xs text-gray-100 focus:outline-none focus:border-brand-yellow/50 flex-shrink-0 w-40">
                       <option value="">— Skip —</option>
                       {FSM_FIELD_GROUPS.map(group => {
                         const available = group.fields.filter(f => !takenByOthers.has(f.value) || mapping[h] === f.value);
@@ -863,7 +863,7 @@ setHeaders(hdrs); setRows(data); setMapping(autoMap); setStep('map');
             <div className="flex gap-2">
               <button onClick={() => setStep('upload')} className="bg-gray-800 hover:bg-gray-700 text-gray-400 px-4 py-2 rounded-lg text-sm transition-colors">← Back</button>
               <button onClick={fillMode ? buildMatches : doImport} disabled={importing||!targetProjId}
-                className="bg-indigo-600 hover:bg-indigo-500 disabled:opacity-50 text-white px-5 py-2 rounded-lg text-sm font-semibold transition-colors flex-1">
+                className="bg-brand-yellow hover:bg-brand-yellow disabled:opacity-50 text-brand-navy px-5 py-2 rounded-lg text-sm font-semibold transition-colors flex-1">
                 {importing ? 'Importing...' : fillMode ? `Match tracks →` : `Import ${mode==='single'?'1 track':rows.length+' tracks'}`}
               </button>
             </div>
@@ -871,7 +871,7 @@ setHeaders(hdrs); setRows(data); setMapping(autoMap); setStep('map');
           {step==='match' && <>
             <div className="bg-gray-800/50 border border-gray-700 rounded-xl p-3 flex items-center justify-between">
               <p className="text-xs text-gray-400">Matching {matchResults.length} CSV row{matchResults.length!==1?'s':''} to existing tracks by title</p>
-              <span className="text-xs text-indigo-400 font-medium">
+              <span className="text-xs text-brand-yellow/75 font-medium">
                 {matchResults.filter(r => (r.userOverride === undefined ? r.bestMatch : r.userOverride) ).length} will update
               </span>
             </div>
@@ -910,7 +910,7 @@ setHeaders(hdrs); setRows(data); setMapping(autoMap); setStep('map');
                       <select
                         value={r.userOverride === undefined ? (r.bestMatch?.id || '') : r.userOverride}
                         onChange={e => setMatchOverride(i, e.target.value || null)}
-                        className="bg-gray-800 border border-yellow-700/50 rounded-lg px-2 py-1.5 text-xs text-gray-100 focus:outline-none focus:border-indigo-500 w-full mt-1">
+                        className="bg-gray-800 border border-yellow-700/50 rounded-lg px-2 py-1.5 text-xs text-gray-100 focus:outline-none focus:border-brand-yellow/50 w-full mt-1">
                         <option value="">— Skip this row —</option>
                         {r.candidates.map(c => (
                           <option key={c.track.id} value={c.track.id}>
@@ -926,7 +926,7 @@ setHeaders(hdrs); setRows(data); setMapping(autoMap); setStep('map');
             <div className="flex gap-2">
               <button onClick={() => setStep('map')} className="bg-gray-800 hover:bg-gray-700 text-gray-400 px-4 py-2 rounded-lg text-sm transition-colors">← Back</button>
               <button onClick={doFillImport} disabled={importing}
-                className="bg-indigo-600 hover:bg-indigo-500 disabled:opacity-50 text-white px-5 py-2 rounded-lg text-sm font-semibold transition-colors flex-1">
+                className="bg-brand-yellow hover:bg-brand-yellow disabled:opacity-50 text-brand-navy px-5 py-2 rounded-lg text-sm font-semibold transition-colors flex-1">
                 {importing ? 'Saving...' : `Fill from imports`}
               </button>
             </div>
@@ -1023,13 +1023,13 @@ function PitchManager({ session }) {
           <p className="text-gray-500 text-xs mt-0.5">Track every pitch and follow-up</p>
         </div>
         <button onClick={() => {setForm(newPitch());setEditing(null);setShowForm(true);}}
-          className="bg-indigo-600 hover:bg-indigo-500 text-white px-4 py-2 rounded-lg text-sm font-semibold transition-colors">
+          className="bg-brand-yellow hover:bg-brand-yellow text-brand-navy px-4 py-2 rounded-lg text-sm font-semibold transition-colors">
           + Log Pitch
         </button>
       </div>
       <div className="flex gap-2 mb-4 overflow-x-auto pb-1">
         <button onClick={() => setFilterStatus('')}
-          className={`px-3 py-1.5 rounded-lg text-xs font-medium border whitespace-nowrap flex-shrink-0 transition-colors ${!filterStatus?'bg-indigo-600 border-indigo-500 text-white':'bg-gray-800 border-gray-700 text-gray-400'}`}>
+          className={`px-3 py-1.5 rounded-lg text-xs font-medium border whitespace-nowrap flex-shrink-0 transition-colors ${!filterStatus?'bg-brand-yellow border-brand-yellow/50 text-brand-navy':'bg-gray-800 border-gray-700 text-gray-400'}`}>
           All ({pitches.length})
         </button>
         {PITCH_STATUSES.map(s => {
@@ -1037,7 +1037,7 @@ function PitchManager({ session }) {
           if(!count)return null;
           return (
             <button key={s} onClick={() => setFilterStatus(s)}
-              className={`px-3 py-1.5 rounded-lg text-xs font-medium border whitespace-nowrap flex-shrink-0 transition-colors ${filterStatus===s?'bg-indigo-600 border-indigo-500 text-white':'bg-gray-800 border-gray-700 text-gray-400'}`}>
+              className={`px-3 py-1.5 rounded-lg text-xs font-medium border whitespace-nowrap flex-shrink-0 transition-colors ${filterStatus===s?'bg-brand-yellow border-brand-yellow/50 text-brand-navy':'bg-gray-800 border-gray-700 text-gray-400'}`}>
               {s} ({count})
             </button>
           );
@@ -1083,7 +1083,7 @@ function PitchManager({ session }) {
             </div>
           </div>
           <div className="flex gap-2 mt-4">
-            <button onClick={savePitch} className="bg-indigo-600 hover:bg-indigo-500 text-white px-4 py-2 rounded-lg text-sm font-semibold transition-colors flex-1">
+            <button onClick={savePitch} className="bg-brand-yellow hover:bg-brand-yellow text-brand-navy px-4 py-2 rounded-lg text-sm font-semibold transition-colors flex-1">
               {editing?'Update Pitch':'Save Pitch'}
             </button>
             <button onClick={() => {setShowForm(false);setEditing(null);setForm(newPitch());}}
@@ -1119,7 +1119,7 @@ function PitchManager({ session }) {
                     </div>
                     {p.company && <p className="text-xs text-gray-500 mt-0.5">{p.company}</p>}
                     <div className="flex gap-2 mt-1 flex-wrap">
-                      {p.track_title && <span className="text-xs text-indigo-400">{p.track_title}</span>}
+                      {p.track_title && <span className="text-xs text-brand-yellow/75">{p.track_title}</span>}
                       {p.project_name && <span className="text-xs text-gray-500">{p.project_name}</span>}
                     </div>
                     <div className="flex gap-2 mt-0.5 flex-wrap">
@@ -1138,7 +1138,7 @@ function PitchManager({ session }) {
                     )}
                   </div>
                   <div className="flex gap-2 flex-shrink-0">
-                    <button onClick={() => openEdit(p)} className="text-xs text-gray-500 hover:text-indigo-400 transition-colors py-1">Edit</button>
+                    <button onClick={() => openEdit(p)} className="text-xs text-gray-500 hover:text-brand-yellow/75 transition-colors py-1">Edit</button>
                     <button onClick={() => delPitch(p.id)} className="text-gray-600 hover:text-red-400 text-lg leading-none transition-colors py-1">×</button>
                   </div>
                 </div>
@@ -1241,7 +1241,7 @@ function LinksManager({ session }) {
                   </div>
                  <button
   onClick={e => { e.stopPropagation(); copyLink(pl.token, e.target); }}
-  className="text-xs text-indigo-400 hover:text-indigo-300 transition-colors flex-shrink-0 px-2 py-1 border border-indigo-800 rounded-lg"
+  className="text-xs text-brand-yellow/75 hover:text-brand-yellow transition-colors flex-shrink-0 px-2 py-1 border border-brand-yellow/15 rounded-lg"
 >
   Copy link
 </button>
@@ -1464,7 +1464,7 @@ console.log('briefs result', data, 'now', now);
                     ) : (
                       <button
                         onClick={() => openSubmit(b)}
-                        className="text-xs bg-indigo-600 hover:bg-indigo-500 text-white px-3 py-1.5 rounded-lg font-medium transition-colors"
+                        className="text-xs bg-brand-yellow hover:bg-brand-yellow text-brand-navy px-3 py-1.5 rounded-lg font-medium transition-colors"
                       >
                         Submit
                       </button>
@@ -1499,7 +1499,7 @@ console.log('briefs result', data, 'now', now);
                   <div className="flex flex-col gap-2">
                     {projects.map(p => (
                       <div key={p.id}
-                        className="bg-gray-800 border border-gray-700 rounded-lg p-3 cursor-pointer hover:border-indigo-500 transition-colors"
+                        className="bg-gray-800 border border-gray-700 rounded-lg p-3 cursor-pointer hover:border-brand-yellow/50 transition-colors"
                         onClick={() => { setSelectedProject(p); setSubmitStep('tracks'); }}>
                         <p className="text-sm font-medium text-gray-100">{p.name}</p>
                         <p className="text-xs text-gray-500 mt-0.5">{p.tracks?.length || 0} tracks</p>
@@ -1520,7 +1520,7 @@ console.log('briefs result', data, 'now', now);
                       return (
                         <div key={t.id}
                           onClick={() => !disabled && toggleTrack(t.id)}
-                          className={`bg-gray-800 border rounded-lg p-3 cursor-pointer transition-colors ${selected ? 'border-indigo-500 bg-indigo-900/20' : disabled ? 'border-gray-700 opacity-40 cursor-not-allowed' : 'border-gray-700 hover:border-gray-500'}`}>
+                          className={`bg-gray-800 border rounded-lg p-3 cursor-pointer transition-colors ${selected ? 'border-brand-yellow/50 bg-brand-yellow/5' : disabled ? 'border-gray-700 opacity-40 cursor-not-allowed' : 'border-gray-700 hover:border-gray-500'}`}>
                           <p className="text-sm font-medium text-gray-100">{d.title || 'Untitled'}</p>
                           <p className="text-xs text-gray-500 mt-0.5">{[d.bpm && `${d.bpm} BPM`, d.key, d.genre].filter(Boolean).join(' · ')}</p>
                         </div>
@@ -1528,7 +1528,7 @@ console.log('briefs result', data, 'now', now);
                     })}
                   </div>
                   <button onClick={() => setSubmitStep('name')} disabled={selectedTracks.length === 0}
-                    className="bg-indigo-600 hover:bg-indigo-500 disabled:opacity-50 text-white py-2.5 rounded-lg text-sm font-semibold transition-colors">
+                    className="bg-brand-yellow hover:bg-brand-yellow disabled:opacity-50 text-brand-navy py-2.5 rounded-lg text-sm font-semibold transition-colors">
                     Next — Name Your Playlist
                   </button>
                 </>
@@ -1546,7 +1546,7 @@ console.log('briefs result', data, 'now', now);
                   />
                   <p className="text-xs text-gray-600">{selectedTracks.length} track{selectedTracks.length !== 1 ? 's' : ''} selected</p>
                   <button onClick={submitToBrief} disabled={!!submitting}
-                    className="bg-indigo-600 hover:bg-indigo-500 disabled:opacity-50 text-white py-2.5 rounded-lg text-sm font-semibold transition-colors">
+                    className="bg-brand-yellow hover:bg-brand-yellow disabled:opacity-50 text-brand-navy py-2.5 rounded-lg text-sm font-semibold transition-colors">
                     {submitting ? 'Submitting...' : 'Submit to Brief'}
                   </button>
                   <button onClick={() => setSubmitStep('tracks')} className="text-xs text-gray-500 hover:text-gray-300 text-center transition-colors">
@@ -1934,14 +1934,14 @@ if(showAccount) return <AccountSettings session={session} onBack={() => setShowA
         <button onClick={() => setShareLink(null)} className="text-gray-600 hover:text-gray-300 text-xl">×</button>
       </div>
       <p className="text-xs text-gray-400">Anyone with this link can view the playlist and metadata. No login required.</p>
-      <div className="bg-gray-800 border border-gray-700 rounded-lg px-3 py-2 text-xs text-indigo-400 break-all">{shareLink}</div>
+      <div className="bg-gray-800 border border-gray-700 rounded-lg px-3 py-2 text-xs text-brand-yellow/75 break-all">{shareLink}</div>
       <button onClick={e => {
   navigator.clipboard.writeText(shareLink).then(() => {
     const orig = e.target.textContent;
     e.target.textContent = 'Copied!';
     setTimeout(() => e.target.textContent = orig, 1500);
   });
-}} className="bg-indigo-600 hover:bg-indigo-500 text-white px-4 py-2.5 rounded-lg text-sm font-semibold transition-colors">
+}} className="bg-brand-yellow hover:bg-brand-yellow text-brand-navy px-4 py-2.5 rounded-lg text-sm font-semibold transition-colors">
   Copy Link
 </button>
     </div>
@@ -1969,7 +1969,7 @@ if(showAccount) return <AccountSettings session={session} onBack={() => setShowA
           setSharePrompt(null);
           doShare(sharePrompt, name);
         }}
-        className="bg-indigo-600 hover:bg-indigo-500 text-white px-4 py-2.5 rounded-lg text-sm font-semibold transition-colors"
+        className="bg-brand-yellow hover:bg-brand-yellow text-brand-navy px-4 py-2.5 rounded-lg text-sm font-semibold transition-colors"
       >
         Generate Link
       </button>
@@ -1989,7 +1989,7 @@ if(showAccount) return <AccountSettings session={session} onBack={() => setShowA
           </div>
           <div className="flex items-center gap-2">
             {tab==='projects' && (              <button onClick={() => { setShowNewChooser(true); setShowAddProj(false); }}
-                className="bg-indigo-600 hover:bg-indigo-500 text-white px-3 py-1.5 rounded-lg text-xs font-semibold transition-colors">
+                className="bg-brand-yellow hover:bg-brand-yellow text-brand-navy px-3 py-1.5 rounded-lg text-xs font-semibold transition-colors">
                 + New
               </button>
             )}
@@ -2069,7 +2069,7 @@ if(showAccount) return <AccountSettings session={session} onBack={() => setShowA
                 </select>
               </div>
               <div className="flex gap-2">
-                <button onClick={addProject} className="bg-indigo-600 hover:bg-indigo-500 text-white px-4 py-2.5 rounded-lg text-sm font-semibold transition-colors flex-1">Create Project</button>
+                <button onClick={addProject} className="bg-brand-yellow hover:bg-brand-yellow text-brand-navy px-4 py-2.5 rounded-lg text-sm font-semibold transition-colors flex-1">Create Project</button>
                 <button onClick={() => {setShowAddProj(false);setDraft({name:'',artist:'',type:'Album'});}} className="bg-gray-800 hover:bg-gray-700 text-gray-400 px-4 py-2.5 rounded-lg text-sm transition-colors">Cancel</button>
               </div>
             </div>
@@ -2113,7 +2113,7 @@ if(showAccount) return <AccountSettings session={session} onBack={() => setShowA
             <div className="flex gap-2 flex-shrink-0">
               <button onClick={() => exportTracksToCsv(proj?.tracks || [], `${proj?.name || 'tracks'}.csv`)} disabled={!proj?.tracks?.length} className="bg-gray-800 hover:bg-gray-700 disabled:opacity-40 disabled:cursor-not-allowed text-gray-300 px-3 py-2 rounded-lg text-xs transition-colors">Export All</button>
               {proj?.tracks?.length > 0 && <button onClick={() => setShowFillImport(true)} className="bg-gray-800 hover:bg-gray-700 text-gray-300 px-3 py-2 rounded-lg text-xs transition-colors">Fill from imports</button>}
-              <button onClick={addTrack} className="bg-indigo-600 hover:bg-indigo-500 text-white px-3 py-2 rounded-lg text-xs font-semibold transition-colors">+ Track</button>
+              <button onClick={addTrack} className="bg-brand-yellow hover:bg-brand-yellow text-brand-navy px-3 py-2 rounded-lg text-xs font-semibold transition-colors">+ Track</button>
             </div>
           </div>
           <div className="flex gap-2 mb-4">
@@ -2132,7 +2132,7 @@ if(showAccount) return <AccountSettings session={session} onBack={() => setShowA
     <button onClick={() => exportTracksToCsv(selectedTracks, `${proj?.name || 'tracks'}-selection.csv`)} className="bg-emerald-600 hover:bg-emerald-500 text-white px-3 py-2 rounded-lg text-xs font-semibold transition-colors whitespace-nowrap">
       CSV ({exportSel.size})
     </button>
-<button onClick={() => setSharePrompt([...exportSel])} className="bg-indigo-600 hover:bg-indigo-500 text-white px-3 py-2 rounded-lg text-xs font-semibold transition-colors whitespace-nowrap">
+<button onClick={() => setSharePrompt([...exportSel])} className="bg-brand-yellow hover:bg-brand-yellow text-brand-navy px-3 py-2 rounded-lg text-xs font-semibold transition-colors whitespace-nowrap">
   Share ({exportSel.size})
 </button>
   </div>
@@ -2165,16 +2165,16 @@ if(showAccount) return <AccountSettings session={session} onBack={() => setShowA
                 return (
                   <div key={t.id} className={`bg-gray-900 border border-gray-800 rounded-xl p-4 ${isVersion ? 'ml-6 border-l-2 border-l-purple-700/50' : ''}`}>
                     <div className="flex items-center gap-3">
-                      <input type="checkbox" checked={exportSel.has(t.id)} onChange={() => togExport(t.id)} className="w-5 h-5 accent-indigo-500 cursor-pointer flex-shrink-0" />
+                      <input type="checkbox" checked={exportSel.has(t.id)} onChange={() => togExport(t.id)} className="w-5 h-5 accent-brand-yellow cursor-pointer flex-shrink-0" />
                       <div className="flex-1 min-w-0" onClick={() => openTrack(t)}>
                         <div className="flex items-center gap-2 flex-wrap">
                           {d.trackNum && <span className="text-xs text-gray-600">{d.trackNum}.</span>}
                           <span className="font-medium text-gray-100 truncate">{d.title||'Untitled Track'}</span>
-                          {t.version_label && <span className="text-xs bg-purple-900/50 text-purple-300 px-2 py-0.5 rounded-full">{t.version_label}</span>}
-                          {versionCount > 0 && <span className="text-xs bg-indigo-900/50 text-indigo-300 px-2 py-0.5 rounded-full">+{versionCount} version{versionCount===1?'':'s'}</span>}
+                          {t.version_label && <span className="text-xs bg-brand-yellow/10 text-brand-yellow px-2 py-0.5 rounded-full">{t.version_label}</span>}
+                          {versionCount > 0 && <span className="text-xs bg-brand-yellow/10 text-brand-yellow px-2 py-0.5 rounded-full">+{versionCount} version{versionCount===1?'':'s'}</span>}
                           {d.explicit && <span className="text-xs bg-gray-700 text-gray-400 px-1.5 rounded">E</span>}
                           {d.aiAssisted==='Yes' && <span className="text-xs bg-red-900/50 text-red-400 px-2 py-0.5 rounded-full">AI</span>}
-                          {d.audioUrl && <span className="text-xs bg-indigo-900/50 text-indigo-400 px-2 py-0.5 rounded-full">♪</span>}
+                          {d.audioUrl && <span className="text-xs bg-brand-yellow/10 text-brand-yellow/75 px-2 py-0.5 rounded-full">♪</span>}
                         </div>
                         <div className="flex gap-2 mt-0.5 flex-wrap">
                           {d.bpm && <span className="text-xs text-gray-500">{d.bpm} BPM</span>}
@@ -2209,7 +2209,7 @@ if(showAccount) return <AccountSettings session={session} onBack={() => setShowA
             <button onClick={() => {setView('project');setSec(0);}} className="text-gray-600 hover:text-gray-400 transition-colors truncate">{proj?.name}</button>
             <span className="text-gray-700 flex-shrink-0">›</span>
             <span className="text-gray-400 truncate">{trackData?.title||'New Track'}</span>
-            {versionLabel && <span className="text-xs bg-purple-900/50 text-purple-300 px-2 py-0.5 rounded-full flex-shrink-0">{versionLabel}</span>}
+            {versionLabel && <span className="text-xs bg-brand-yellow/10 text-brand-yellow px-2 py-0.5 rounded-full flex-shrink-0">{versionLabel}</span>}
           </div>
           {trackId && (
             <div className="mb-4">
@@ -2221,7 +2221,7 @@ if(showAccount) return <AccountSettings session={session} onBack={() => setShowA
           <div className="flex gap-1 mb-5 overflow-x-auto pb-1 -mx-1 px-1">
             {SECTIONS.map((s,i) => (
               <button key={i} onClick={() => setSec(i)}
-                className={`px-3 py-2 rounded-lg text-xs font-medium whitespace-nowrap transition-colors flex-shrink-0 ${sec===i?'bg-indigo-600 text-white':'bg-gray-800 text-gray-500 hover:text-gray-300'}`}>{s}</button>
+                className={`px-3 py-2 rounded-lg text-xs font-medium whitespace-nowrap transition-colors flex-shrink-0 ${sec===i?'bg-brand-yellow text-brand-navy':'bg-gray-800 text-gray-500 hover:text-gray-300'}`}>{s}</button>
             ))}
           </div>
           <TrackForm
@@ -2249,7 +2249,7 @@ if(showAccount) return <AccountSettings session={session} onBack={() => setShowA
             <div className="flex gap-2">
               <button onClick={saveTrack} className="bg-gray-800 hover:bg-gray-700 text-gray-400 px-3 py-2.5 rounded-lg text-sm transition-colors">Save</button>
               {sec<SECTIONS.length-1
-                ?<button onClick={() => setSec(s=>s+1)} className="bg-indigo-600 hover:bg-indigo-500 text-white px-5 py-2.5 rounded-lg text-sm font-semibold transition-colors">Next →</button>
+                ?<button onClick={() => setSec(s=>s+1)} className="bg-brand-yellow hover:bg-brand-yellow text-brand-navy px-5 py-2.5 rounded-lg text-sm font-semibold transition-colors">Next →</button>
                 :<button onClick={saveTrack} className="bg-emerald-600 hover:bg-emerald-500 text-white px-5 py-2.5 rounded-lg text-sm font-semibold transition-colors">Save ✓</button>}
             </div>
           </div>

@@ -34,7 +34,7 @@ const IconCopy = () => (
   </svg>
 );
 
-const inp = "bg-gray-800 border border-gray-700 rounded-lg px-3 py-2 text-sm text-gray-100 placeholder-gray-600 focus:outline-none focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 w-full";
+const inp = "bg-gray-800 border border-gray-700 rounded-lg px-3 py-2 text-sm text-gray-100 placeholder-gray-600 focus:outline-none focus:border-brand-yellow/50 focus:ring-1 focus:ring-brand-yellow w-full";
 
 // Score a track against a parsed brief.
 // Semantics: each criterion only contributes to `possible` if BOTH the brief
@@ -141,12 +141,12 @@ function MatchScore({ score }) {
   const color = score >= 85
     ? 'bg-green-500'
     : score >= 65
-    ? 'bg-indigo-500'
+    ? 'bg-brand-yellow'
     : 'bg-gray-600';
   const textColor = score >= 85
     ? 'text-green-400'
     : score >= 65
-    ? 'text-indigo-400'
+    ? 'text-brand-yellow/75'
     : 'text-gray-500';
   return (
     <div className="flex items-center gap-2">
@@ -196,7 +196,7 @@ function StepPaste({ onAnalyze, onClose }) {
         <button
           onClick={() => onAnalyze(text)}
           disabled={!text.trim()}
-          className="w-full bg-indigo-600 hover:bg-indigo-500 disabled:opacity-40 disabled:cursor-not-allowed text-white py-3 rounded-xl text-sm font-semibold transition-colors flex items-center justify-center gap-2"
+          className="w-full bg-brand-yellow hover:bg-brand-yellow disabled:opacity-40 disabled:cursor-not-allowed text-brand-navy py-3 rounded-xl text-sm font-semibold transition-colors flex items-center justify-center gap-2"
         >
           <IconSpark />
           Find My Best Matches
@@ -224,9 +224,9 @@ function StepAnalyzing() {
   return (
     <div className="flex flex-col items-center justify-center h-full gap-8 px-8">
       <div className="relative w-20 h-20">
-        <div className="absolute inset-0 rounded-2xl bg-indigo-600/20 border border-indigo-500/30" />
+        <div className="absolute inset-0 rounded-2xl bg-brand-yellow/20 border border-brand-yellow/30" />
         <div
-          className="absolute inset-2 rounded-xl bg-indigo-600/10 border border-indigo-500/20"
+          className="absolute inset-2 rounded-xl bg-brand-yellow/10 border border-brand-yellow/20"
           style={{ animation: 'spin 3s linear infinite' }}
         />
         <div className="absolute inset-0 flex items-center justify-center">
@@ -243,7 +243,7 @@ function StepAnalyzing() {
           {PHASES.map((_, i) => (
             <div
               key={i}
-              className={`w-1.5 h-1.5 rounded-full transition-colors duration-300 ${i <= phase ? 'bg-indigo-400' : 'bg-gray-700'}`}
+              className={`w-1.5 h-1.5 rounded-full transition-colors duration-300 ${i <= phase ? 'bg-brand-yellow' : 'bg-gray-700'}`}
             />
           ))}
         </div>
@@ -277,11 +277,11 @@ function StepResults({ parsed, ranked, onGenerateEmail, onBack }) {
           <p className="text-sm font-semibold text-gray-100">Your Best Matches</p>
         </div>
         {/* Brief summary pill */}
-        <div className="bg-indigo-950/50 border border-indigo-800/40 rounded-xl px-3 py-2.5">
-          <p className="text-xs text-indigo-300 leading-relaxed">{parsed?.summary}</p>
+        <div className="bg-brand-yellow/5 border border-brand-yellow/15 rounded-xl px-3 py-2.5">
+          <p className="text-xs text-brand-yellow leading-relaxed">{parsed?.summary}</p>
           <div className="flex flex-wrap gap-1.5 mt-2">
             {parsed?.moods?.slice(0, 4).map(m => (
-              <span key={m} className="text-xs bg-indigo-900/50 text-indigo-300 px-2 py-0.5 rounded-full">{m}</span>
+              <span key={m} className="text-xs bg-brand-yellow/10 text-brand-yellow px-2 py-0.5 rounded-full">{m}</span>
             ))}
             {parsed?.bpmMin && (
               <span className="text-xs bg-gray-800 text-gray-400 px-2 py-0.5 rounded-full">
@@ -307,12 +307,12 @@ function StepResults({ parsed, ranked, onGenerateEmail, onBack }) {
               onClick={() => toggle(track.id)}
               className={`w-full text-left rounded-xl border p-3.5 transition-all ${
                 isSelected
-                  ? 'bg-indigo-950/40 border-indigo-700/60'
+                  ? 'bg-brand-yellow/5 border-brand-yellow/25'
                   : 'bg-gray-900 border-gray-800 hover:border-gray-700'
               }`}
             >
               <div className="flex items-start gap-3">
-                <div className={`w-7 h-7 rounded-lg flex items-center justify-center flex-shrink-0 mt-0.5 transition-colors ${isSelected ? 'bg-indigo-600' : 'bg-gray-800'}`}>
+                <div className={`w-7 h-7 rounded-lg flex items-center justify-center flex-shrink-0 mt-0.5 transition-colors ${isSelected ? 'bg-brand-yellow' : 'bg-gray-800'}`}>
                   {isSelected
                     ? <IconCheck />
                     : <span className="text-xs text-gray-500 font-bold">{idx + 1}</span>
@@ -351,7 +351,7 @@ function StepResults({ parsed, ranked, onGenerateEmail, onBack }) {
         <button
           onClick={() => onGenerateEmail(ranked.filter(t => selected.has(t.id)))}
           disabled={selected.size === 0}
-          className="w-full bg-indigo-600 hover:bg-indigo-500 disabled:opacity-40 disabled:cursor-not-allowed text-white py-3 rounded-xl text-sm font-semibold transition-colors flex items-center justify-center gap-2"
+          className="w-full bg-brand-yellow hover:bg-brand-yellow disabled:opacity-40 disabled:cursor-not-allowed text-brand-navy py-3 rounded-xl text-sm font-semibold transition-colors flex items-center justify-center gap-2"
         >
           <IconPitch />
           Draft Pitch Email · {selected.size} track{selected.size !== 1 ? 's' : ''}
@@ -536,14 +536,14 @@ ${artistName}`
 
         {/* Share link */}
         {shareUrl ? (
-          <div className="bg-indigo-950/40 border border-indigo-800/40 rounded-xl p-3 flex items-center justify-between gap-3">
+          <div className="bg-brand-yellow/5 border border-brand-yellow/15 rounded-xl p-3 flex items-center justify-between gap-3">
             <div className="flex-1 min-w-0">
-              <p className="text-xs text-indigo-300 font-medium mb-0.5">Shareable playlist link</p>
-              <p className="text-xs text-indigo-400 truncate">{shareUrl}</p>
+              <p className="text-xs text-brand-yellow font-medium mb-0.5">Shareable playlist link</p>
+              <p className="text-xs text-brand-yellow/75 truncate">{shareUrl}</p>
             </div>
             <button
               onClick={() => { navigator.clipboard.writeText(shareUrl).catch(() => {}); }}
-              className="flex-shrink-0 text-xs bg-indigo-900/60 hover:bg-indigo-800/60 text-indigo-300 px-2.5 py-1.5 rounded-lg transition-colors"
+              className="flex-shrink-0 text-xs bg-brand-yellow/10 hover:bg-brand-yellow/10 text-brand-yellow px-2.5 py-1.5 rounded-lg transition-colors"
             >
               Copy
             </button>
@@ -575,7 +575,7 @@ ${artistName}`
           <div className="flex items-center justify-between">
             <label className="text-xs text-gray-400 font-medium">Email Body</label>
             {loading && (
-              <div className="flex items-center gap-1.5 text-xs text-indigo-400">
+              <div className="flex items-center gap-1.5 text-xs text-brand-yellow/75">
                 <div className="w-3 h-3 border-2 border-indigo-400 border-t-transparent rounded-full" style={{ animation: 'spin 1s linear infinite' }} />
                 Drafting…
               </div>
@@ -603,7 +603,7 @@ ${artistName}`
         <button
           onClick={save}
           disabled={loading || saving}
-          className="w-full bg-indigo-600 hover:bg-indigo-500 disabled:opacity-40 text-white py-3 rounded-xl text-sm font-semibold transition-colors"
+          className="w-full bg-brand-yellow hover:bg-brand-yellow disabled:opacity-40 text-brand-navy py-3 rounded-xl text-sm font-semibold transition-colors"
         >
           {saving ? 'Saving…' : 'Save & Log Pitch'}
         </button>

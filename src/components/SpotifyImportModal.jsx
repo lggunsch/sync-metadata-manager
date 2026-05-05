@@ -1,7 +1,7 @@
 // src/components/SpotifyImportModal.jsx
 import { useState } from "react";
 
-const inpClass = "bg-gray-800 border border-gray-700 rounded-lg px-3 py-2 text-sm text-gray-100 placeholder-gray-600 focus:outline-none focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 w-full";
+const inpClass = "bg-gray-800 border border-gray-700 rounded-lg px-3 py-2 text-sm text-gray-100 placeholder-gray-600 focus:outline-none focus:border-brand-yellow/50 focus:ring-1 focus:ring-brand-yellow w-full";
 
 export default function SpotifyImportModal({ onClose, onImport }) {
   const [url, setUrl] = useState('');
@@ -70,7 +70,7 @@ export default function SpotifyImportModal({ onClose, onImport }) {
           <button
             onClick={handleImport}
             disabled={loading || !url.trim()}
-            className="bg-indigo-600 hover:bg-indigo-500 disabled:opacity-50 text-white px-4 py-2 rounded-lg text-sm font-semibold transition-colors flex-1"
+            className="bg-brand-yellow hover:bg-brand-yellow disabled:opacity-50 text-brand-navy px-4 py-2 rounded-lg text-sm font-semibold transition-colors flex-1"
           >
             {loading ? 'Importing...' : 'Import'}
           </button>

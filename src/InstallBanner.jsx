@@ -50,7 +50,7 @@ export default function InstallBanner() {
       <div className="flex gap-2 flex-shrink-0">
         {!isIOS && (
           <button onClick={handleInstall}
-            className="bg-indigo-600 hover:bg-indigo-500 text-white px-3 py-1.5 rounded-lg text-xs font-semibold transition-colors">
+            className="bg-brand-yellow hover:bg-brand-yellow text-brand-navy px-3 py-1.5 rounded-lg text-xs font-semibold transition-colors">
             Install
           </button>
         )}

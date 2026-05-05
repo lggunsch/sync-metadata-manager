@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { supabase } from "./supabase";
 
-const inp = "bg-gray-800 border border-gray-700 rounded-lg px-3 py-2 text-sm text-gray-100 placeholder-gray-600 focus:outline-none focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 w-full";
+const inp = "bg-gray-800 border border-gray-700 rounded-lg px-3 py-2 text-sm text-gray-100 placeholder-gray-600 focus:outline-none focus:border-brand-yellow/50 focus:ring-1 focus:ring-brand-yellow w-full";
 
 export default function AdminPanel({ session }) {
   const [email, setEmail] = useState('');
@@ -75,7 +75,7 @@ export default function AdminPanel({ session }) {
           <button
             onClick={createSupervisor}
             disabled={loading}
-            className="bg-indigo-600 hover:bg-indigo-500 disabled:opacity-50 text-white py-2.5 rounded-lg text-sm font-semibold transition-colors"
+            className="bg-brand-yellow hover:bg-brand-yellow disabled:opacity-50 text-brand-navy py-2.5 rounded-lg text-sm font-semibold transition-colors"
           >
             {loading ? 'Creating...' : 'Create Supervisor Account'}
           </button>
@@ -95,7 +95,7 @@ export default function AdminPanel({ session }) {
                 <span className="text-xs text-gray-400">Login URL</span>
                 <button
                   onClick={e => copyText('https://app.friedsodamusic.com', e.target)}
-                  className="text-xs text-indigo-400 hover:text-indigo-300 transition-colors"
+                  className="text-xs text-brand-yellow/75 hover:text-brand-yellow transition-colors"
                 >
                   Copy
                 </button>
@@ -107,7 +107,7 @@ export default function AdminPanel({ session }) {
                 <span className="text-xs text-gray-400">Temporary Password</span>
                 <button
                   onClick={e => copyText(result.tempPassword, e.target)}
-                  className="text-xs text-indigo-400 hover:text-indigo-300 transition-colors"
+                  className="text-xs text-brand-yellow/75 hover:text-brand-yellow transition-colors"
                 >
                   Copy
                 </button>

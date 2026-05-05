@@ -25,7 +25,7 @@ export default function AccountSettings({ session, onBack }) {
 
   const isLifetime = subscription?.plan === 'lifetime';
   const planLabel = isLifetime ? 'Lifetime' : 'Monthly';
-  const planColor = isLifetime ? 'text-green-400 bg-green-900/30' : 'text-indigo-400 bg-indigo-900/30';
+  const planColor = isLifetime ? 'text-green-400 bg-green-900/30' : 'text-brand-yellow/75 bg-brand-yellow/8';
 
   const changePassword = async () => {
     setPwMsg(null);
@@ -76,7 +76,7 @@ const openBillingPortal = async () => {
 };
   const signOut = () => supabase.auth.signOut();
 
-  const inp = "bg-gray-800 border border-gray-700 rounded-lg px-3 py-2 text-sm text-gray-100 placeholder-gray-600 focus:outline-none focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 w-full";
+  const inp = "bg-gray-800 border border-gray-700 rounded-lg px-3 py-2 text-sm text-gray-100 placeholder-gray-600 focus:outline-none focus:border-brand-yellow/50 focus:ring-1 focus:ring-brand-yellow w-full";
 
   return (
     <div className="min-h-screen bg-gray-950 text-gray-100">
@@ -119,7 +119,7 @@ const openBillingPortal = async () => {
           <button
             onClick={upgradeToLifetime}
             disabled={upgradeLoading}
-            className="bg-indigo-600 hover:bg-indigo-500 disabled:opacity-50 text-white py-2.5 rounded-lg text-sm font-semibold transition-colors"
+            className="bg-brand-yellow hover:bg-brand-yellow disabled:opacity-50 text-brand-navy py-2.5 rounded-lg text-sm font-semibold transition-colors"
           >
             {upgradeLoading ? 'Loading...' : 'Upgrade to Lifetime — $99'}
           </button>

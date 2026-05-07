@@ -1596,6 +1596,13 @@ const [audioAnalyzing, setAudioAnalyzing] = useState(false);
 const [stemsUploading, setStemsUploading] = useState(false);
 const [showBulkEdit, setShowBulkEdit] = useState(false);
 const [showSpotify, setShowSpotify] = useState(false);const [sharePrompt, setSharePrompt] = useState(null);
+const [showOnboarding, setShowOnboarding] = useState(() => !localStorage.getItem('fsm_onboarded'));
+const [onboardStep, setOnboardStep] = useState(0);
+const dismissOnboarding = (goToProjects = false) => {
+  localStorage.setItem('fsm_onboarded', '1');
+  setShowOnboarding(false);
+  if (goToProjects) setTab('projects');
+};
   useEffect(() => {
     supabase.from('projects').select('*, tracks(*)').order('created_at',{ascending:false})
       .then(({data}) => {if(data)setProjects(data.map(p=>({...p,tracks:p.tracks||[]})));setLoaded(true);});
@@ -1923,6 +1930,59 @@ if(showAccount) return <AccountSettings session={session} onBack={() => setShowA
 
   return (
     <div className="min-h-screen bg-gray-950 text-gray-100 w-full overflow-x-hidden">
+      {showOnboarding && (
+  <div className="fixed inset-0 bg-black/80 flex items-end sm:items-center justify-center z-50 p-4">
+    <div className="bg-gray-900 border border-gray-800 rounded-2xl w-full max-w-sm flex flex-col overflow-hidden">
+      <div className="flex items-center justify-between px-5 pt-5 pb-3">
+        <div className="flex gap-1.5">
+          {[0,1,2].map(i => (
+            <div key={i} className={`h-1 rounded-full transition-all duration-300 ${i === onboardStep ? 'w-6 bg-brand-yellow' : 'w-2 bg-gray-700'}`} />
+          ))}
+        </div>
+        <button onClick={() => dismissOnboarding(false)} className="text-gray-600 hover:text-gray-400 text-xl leading-none">×</button>
+      </div>
+      <div className="px-5 pb-2 min-h-[200px]">
+        {onboardStep === 0 && (
+          <>
+            <div className="text-3xl mb-3">📁</div>
+            <h2 className="text-lg font-bold text-white mb-2">Create a project first</h2>
+            <p className="text-sm text-gray-400 leading-relaxed">A project is an album, EP, or collection of tracks. Start by creating one — your catalog lives inside projects.</p>
+            <div className="mt-4 bg-gray-800 border border-gray-700 rounded-xl p-3">
+              <p className="text-xs text-gray-500">Go to <span className="text-gray-300 font-medium">Projects</span> → tap <span className="text-gray-300 font-medium">+ New Project</span></p>
+            </div>
+          </>
+        )}
+        {onboardStep === 1 && (
+          <>
+            <div className="text-3xl mb-3">🎵</div>
+            <h2 className="text-lg font-bold text-white mb-2">Import your tracks</h2>
+            <p className="text-sm text-gray-400 leading-relaxed">Inside your project, import a CSV or add tracks manually. FSM will auto-map your metadata fields — BPM, key, ISRC, mood tags, all of it.</p>
+            <div className="mt-4 bg-gray-800 border border-gray-700 rounded-xl p-3">
+              <p className="text-xs text-gray-500">Open your project → tap <span className="text-gray-300 font-medium">Import</span> or <span className="text-gray-300 font-medium">+ Track</span></p>
+            </div>
+          </>
+        )}
+        {onboardStep === 2 && (
+          <>
+            <div className="text-3xl mb-3">⚡</div>
+            <h2 className="text-lg font-bold text-white mb-2">Paste a brief, send a pitch</h2>
+            <p className="text-sm text-gray-400 leading-relaxed">Once your catalog is in, come back to Briefs. Paste any sync brief and FSM matches your tracks, writes the pitch email, and generates a shareable listening link.</p>
+            <div className="mt-4 bg-brand-yellow/10 border border-brand-yellow/25 rounded-xl p-3">
+              <p className="text-xs text-brand-yellow">The whole thing takes about 2 minutes.</p>
+            </div>
+          </>
+        )}
+      </div>
+      <div className="px-5 py-4 flex gap-2">
+        {onboardStep < 2 ? (
+          <button onClick={() => setOnboardStep(s => s + 1)} className="flex-1 bg-brand-yellow text-brand-navy font-semibold text-sm py-2.5 rounded-xl">Next →</button>
+        ) : (
+          <button onClick={() => dismissOnboarding(true)} className="flex-1 bg-brand-yellow text-brand-navy font-semibold text-sm py-2.5 rounded-xl">Go to Projects →</button>
+        )}
+      </div>
+    </div>
+  </div>
+)}
 {showImport && <ImportModal projects={projects} session={session} onClose={() => setShowImport(false)} onImported={reloadProjects} defaultProjId={projId} />}
 {showFillImport && <ImportModal projects={projects} session={session} onClose={() => setShowFillImport(false)} onImported={reloadProjects} defaultProjId={projId} existingTracks={proj?.tracks || []} fillMode={true} />}
 {showBulkEdit && <BulkEditModal count={exportSel.size} onClose={() => setShowBulkEdit(false)} onSave={handleBulkEdit} />}

@@ -1731,20 +1731,38 @@ const dismissOnboarding = (goToProjects = false) => {
     }
 
     if (data.type === 'track') {
-      if (!projId) { alert('Open a project first to add a single track.'); return; }
       const t = data.tracks[0];
       if (!t) return;
+      let targetProjId = projId;
+      if (!targetProjId) {
+        const { data: newProj, error: projErr } = await supabase
+          .from('projects')
+          .insert({
+            user_id: session.user.id,
+            name: t.title || 'Untitled',
+            artist: t.artist || '',
+            type: 'Single',
+          })
+          .select()
+          .single();
+        if (projErr) { alert('Failed to create project: ' + projErr.message); return; }
+        const { data: freshData } = await supabase.from('projects').select('*, tracks(*)').order('created_at',{ascending:false});
+        if (freshData) setProjects(freshData.map(p => ({ ...p, tracks: p.tracks || [] })));
+        setProjId(newProj.id);
+        targetProjId = newProj.id;
+        setView('project');
+      }
       const { data: newTrack, error } = await supabase
         .from('tracks')
         .insert({
-          project_id: projId,
+          project_id: targetProjId,
           user_id: session.user.id,
           data: { ...newTrackData(), ...t },
         })
         .select()
         .single();
       if (error) { alert('Failed to add track: ' + error.message); return; }
-      setProjects(ps => ps.map(p => p.id !== projId ? p : { ...p, tracks: [...p.tracks, newTrack] }));
+      setProjects(ps => ps.map(p => p.id !== targetProjId ? p : { ...p, tracks: [...p.tracks, newTrack] }));
     }
   };
 

@@ -2056,36 +2056,35 @@ if(showAccount) return <AccountSettings session={session} onBack={() => setShowA
 )}
       {view === 'dashboard' && (
         <div className="border-b border-gray-800 px-4 py-3 flex items-center justify-between sticky top-0 bg-gray-950 z-40">
-          <div className="flex items-center gap-3">
-            <span className="text-sm font-bold text-white">FSM</span>
-            <div className="flex gap-1">
-{['home','projects','pitches','links'].map(t => (                <button key={t} onClick={() => setTab(t)}
-                  className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-colors ${tab===t?'bg-gray-800 text-white':'text-gray-500 hover:text-gray-300'}`}>
-{t==='home'?'Briefs':t==='projects'?'Projects':t==='pitches'?'Pitches':'Links'}                </button>
-              ))}
-            </div>
-          </div>
+          <span className="text-sm font-bold text-white">FSM</span>
           <div className="flex items-center gap-2">
-            {tab==='projects' && (              <button onClick={() => { setShowNewChooser(true); setShowAddProj(false); }}
+            {tab==='projects' && (
+              <button onClick={() => { setShowNewChooser(true); setShowAddProj(false); }}
                 className="bg-brand-yellow hover:bg-brand-yellow text-brand-navy px-3 py-1.5 rounded-lg text-xs font-semibold transition-colors">
                 + New
               </button>
             )}
             <div className="relative">
               <button onClick={() => setShowMenu(!showMenu)}
-                className="bg-gray-800 hover:bg-gray-700 text-gray-400 w-8 h-8 rounded-lg text-sm flex items-center justify-center transition-colors">
-                ⋯
+                className="bg-gray-800 hover:bg-gray-700 text-gray-400 w-10 h-10 rounded-lg text-sm flex items-center justify-center transition-colors">
+                ☰
               </button>
               {showMenu && (
-                <div className="absolute right-0 top-10 bg-gray-900 border border-gray-700 rounded-xl shadow-xl z-50 min-w-36 overflow-hidden">
-                  <button onClick={() => {setShowAccount(true);setShowMenu(false);}}
-  className="w-full text-left px-4 py-3 text-sm text-gray-300 hover:bg-gray-800 transition-colors border-b border-gray-800">
-  Account Settings
-</button>
-<button onClick={() => {signOut();setShowMenu(false);}}
-  className="w-full text-left px-4 py-3 text-sm text-gray-400 hover:bg-gray-800 transition-colors">
-  Sign Out
-</button>
+                <div className="absolute right-0 top-12 bg-gray-900 border border-gray-700 rounded-xl shadow-xl z-50 min-w-48 overflow-hidden">
+                  {['home','projects','pitches','links'].map(t => (
+                    <button key={t} onClick={() => { setTab(t); setShowMenu(false); }}
+                      className={`w-full text-left px-4 py-3 text-sm transition-colors border-b border-gray-800 ${tab===t?'text-white bg-gray-800':'text-gray-300 hover:bg-gray-800'}`}>
+                      {t==='home'?'Briefs':t==='projects'?'Projects':t==='pitches'?'Pitches':'Links'}
+                    </button>
+                  ))}
+                  <button onClick={() => { setShowAccount(true); setShowMenu(false); }}
+                    className="w-full text-left px-4 py-3 text-sm text-gray-300 hover:bg-gray-800 transition-colors border-b border-gray-800">
+                    Account Settings
+                  </button>
+                  <button onClick={() => { signOut(); setShowMenu(false); }}
+                    className="w-full text-left px-4 py-3 text-sm text-gray-400 hover:bg-gray-800 transition-colors">
+                    Sign Out
+                  </button>
                 </div>
               )}
             </div>
@@ -2333,8 +2332,6 @@ if(showAccount) return <AccountSettings session={session} onBack={() => setShowA
           </div>
         </div>
       )}
-
-      <InstallBanner />
     </div>
   );
 }

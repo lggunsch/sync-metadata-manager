@@ -1733,7 +1733,7 @@ const dismissOnboarding = (goToProjects = false) => {
     if (data.type === 'track') {
       const t = data.tracks[0];
       if (!t) return;
-      let targetProjId = projId;
+      let targetProjId = view === 'project' ? projId : null;
       if (!targetProjId) {
         const { data: newProj, error: projErr } = await supabase
           .from('projects')

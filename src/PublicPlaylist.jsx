@@ -64,6 +64,108 @@ function MetaRow({ label, value }) {
   );
 }
 
+function fmtStat(n) {
+  if (n == null) return 'N/A';
+  if (n >= 1000000) return (n / 1000000).toFixed(1).replace(/\.0$/, '') + 'M';
+  if (n >= 1000) return (n / 1000).toFixed(1).replace(/\.0$/, '') + 'K';
+  return String(n);
+}
+
+function ArtistBlock({ profile }) {
+  if (!profile) return null;
+
+  const initials = (profile.artist_name || '')
+    .split(' ').map(w => w[0]).join('').toUpperCase().slice(0, 2) || '?';
+
+  const hasListeners = profile.monthly_listeners != null;
+  const hasFollowers = profile.spotify_followers != null;
+  const hasIG = profile.instagram_followers != null;
+  const hasTikTok = profile.tiktok_followers != null;
+
+  return (
+    <div className="bg-gray-900 border border-gray-800 rounded-xl p-4 flex flex-col gap-4 mb-2">
+
+      {/* Artist header */}
+      <div className="flex items-center gap-3">
+        {profile.spotify_image_url ? (
+          <img
+            src={profile.spotify_image_url}
+            alt={profile.artist_name}
+            className="w-12 h-12 rounded-full object-cover flex-shrink-0"
+          />
+        ) : (
+          <div className="w-12 h-12 rounded-full bg-gray-800 border border-gray-700 flex items-center justify-center flex-shrink-0 text-sm font-semibold text-gray-400">
+            {initials}
+          </div>
+        )}
+        <div className="flex-1 min-w-0">
+          <p className="font-semibold text-white text-base truncate">{profile.artist_name || 'Artist'}</p>
+          {profile.location && (
+            <p className="text-xs text-gray-500 mt-0.5">{profile.location}</p>
+          )}
+        </div>
+        <span className="text-xs text-green-400 bg-green-900/30 px-2 py-0.5 rounded-full flex-shrink-0">pitch-ready</span>
+      </div>
+
+      {/* Bio */}
+      {profile.bio && (
+        <p className="text-sm text-gray-400 leading-relaxed">{profile.bio}</p>
+      )}
+
+      {/* Genre tags */}
+      {profile.genre_tags?.length > 0 && (
+        <div className="flex flex-wrap gap-1.5">
+          {profile.genre_tags.map(tag => (
+            <span key={tag} className="text-xs bg-gray-800 border border-gray-700 text-gray-400 px-2.5 py-0.5 rounded-full">
+              {tag}
+            </span>
+          ))}
+        </div>
+      )}
+
+      {/* Stats */}
+      {(hasListeners || hasFollowers || hasIG || hasTikTok) && (
+        <div className="grid grid-cols-3 gap-2">
+
+          {/* Listeners / Followers */}
+          <div className="bg-gray-800/60 rounded-lg p-3">
+            <p className="text-xs text-gray-500 mb-1">Listeners / Followers</p>
+            <p className="text-base font-semibold text-gray-100 tabular-nums">
+              {fmtStat(profile.monthly_listeners)} / {fmtStat(profile.spotify_followers)}
+            </p>
+            <div className="flex items-center gap-1 mt-1">
+              <span className="text-xs text-gray-600">Spotify</span>
+              {hasFollowers && (
+                <span className="text-xs text-green-500 bg-green-900/20 px-1.5 py-px rounded-full leading-none">live</span>
+              )}
+            </div>
+          </div>
+
+          {/* Instagram */}
+          <div className="bg-gray-800/60 rounded-lg p-3">
+            <p className="text-xs text-gray-500 mb-1">Instagram</p>
+            <p className={`text-base font-semibold tabular-nums ${hasIG ? 'text-gray-100' : 'text-gray-600'}`}>
+              {fmtStat(profile.instagram_followers)}
+            </p>
+            <p className="text-xs text-gray-600 mt-1">followers</p>
+          </div>
+
+          {/* TikTok */}
+          <div className="bg-gray-800/60 rounded-lg p-3">
+            <p className="text-xs text-gray-500 mb-1">TikTok</p>
+            <p className={`text-base font-semibold tabular-nums ${hasTikTok ? 'text-gray-100' : 'text-gray-600'}`}>
+              {fmtStat(profile.tiktok_followers)}
+            </p>
+            <p className="text-xs text-gray-600 mt-1">followers</p>
+          </div>
+
+        </div>
+      )}
+
+    </div>
+  );
+}
+
 const downloadMetadataPDF = (tracks, playlistName) => {
   const PRINT_CSS = `
     *{margin:0;padding:0;box-sizing:border-box;font-family:'Helvetica Neue',Arial,sans-serif}
@@ -129,6 +231,7 @@ const downloadMetadataPDF = (tracks, playlistName) => {
 export default function PublicPlaylist({ token }) {
   const [playlist, setPlaylist] = useState(null);
   const [tracks, setTracks] = useState([]);
+  const [profile, setProfile] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [expanded, setExpanded] = useState(null);
@@ -148,6 +251,17 @@ export default function PublicPlaylist({ token }) {
 
       setPlaylist(result.playlist);
       setTracks(result.tracks || []);
+
+      if (result.playlist?.user_id) {
+        const { data: prof } = await supabase
+          .from('artist_profiles')
+          .select('*')
+          .eq('user_id', result.playlist.user_id)
+          .eq('onboarding_complete', true)
+          .single();
+        if (prof) setProfile(prof);
+      }
+
       setLoading(false);
     };
     load();
@@ -185,8 +299,12 @@ export default function PublicPlaylist({ token }) {
         </div>
       </div>
 
-      {/* Track list */}
       <div className="max-w-3xl mx-auto px-4 py-6 flex flex-col gap-3">
+
+        {/* Artist EPK block */}
+        <ArtistBlock profile={profile} />
+
+        {/* Track list */}
         {tracks.length === 0 ? (
           <div className="text-center py-16 text-gray-600 text-sm">No tracks in this playlist.</div>
         ) : tracks.map((t, i) => {

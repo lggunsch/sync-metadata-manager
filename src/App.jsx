@@ -2091,14 +2091,15 @@ if(showArtistProfile) return <ArtistProfile session={session} onBack={() => { se
                       {t==='home'?'Briefs':t==='projects'?'Projects':t==='pitches'?'Pitches':'Links'}
                     </button>
                   ))}
+                   <button onClick={() => { sessionStorage.setItem('fsm_show_artist_profile', 'true'); setShowArtistProfile(true); setShowMenu(false); }}
+                    className="w-full text-left px-4 py-3 text-sm text-gray-300 hover:bg-gray-800 transition-colors border-b border-gray-800">
+                    Profile
+                  </button>
                   <button onClick={() => { setShowAccount(true); setShowMenu(false); }}
                     className="w-full text-left px-4 py-3 text-sm text-gray-300 hover:bg-gray-800 transition-colors border-b border-gray-800">
                     Account Settings
                   </button>
-                  <button onClick={() => { sessionStorage.setItem('fsm_show_artist_profile', 'true'); setShowArtistProfile(true); setShowMenu(false); }}
-                    className="w-full text-left px-4 py-3 text-sm text-gray-300 hover:bg-gray-800 transition-colors border-b border-gray-800">
-                    Artist Profile (EPK)
-                  </button>
+                    
                   <button onClick={() => { signOut(); setShowMenu(false); }}
                     className="w-full text-left px-4 py-3 text-sm text-gray-400 hover:bg-gray-800 transition-colors">
                     Sign Out

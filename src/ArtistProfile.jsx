@@ -11,7 +11,7 @@ function extractSpotifyArtistId(url) {
     return null;
   }
 }
-
+const STORAGE_KEY = 'fsm_artist_profile_draft';
 function daysSince(isoString) {
   if (!isoString) return null;
   const diff = Date.now() - new Date(isoString).getTime();
@@ -37,13 +37,17 @@ export default function ArtistProfile({ session, onBack, isOnboarding = false, o
   });
 
   useEffect(() => {
+    const draft = sessionStorage.getItem(STORAGE_KEY);
+    if (draft) {
+      try { setForm(JSON.parse(draft)); } catch {}
+    }
     supabase
       .from("artist_profiles")
       .select("*")
       .eq("user_id", session.user.id)
       .single()
       .then(({ data }) => {
-        if (data) {
+        if (data && data.onboarding_complete) {
           setForm({
             artist_name: data.artist_name || "",
             location: data.location || "",
@@ -68,6 +72,7 @@ export default function ArtistProfile({ session, onBack, isOnboarding = false, o
       if (field === "spotify_artist_url") {
         updated.spotify_artist_id = extractSpotifyArtistId(value) || "";
       }
+      sessionStorage.setItem(STORAGE_KEY, JSON.stringify(updated));
       return updated;
     });
   };
@@ -111,7 +116,7 @@ export default function ArtistProfile({ session, onBack, isOnboarding = false, o
       setMsg({ type: "error", text: "Something went wrong. Please try again." });
       return;
     }
-
+sessionStorage.removeItem(STORAGE_KEY);
     if (isOnboarding && onComplete) {
       onComplete();
     } else {

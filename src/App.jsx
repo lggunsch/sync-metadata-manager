@@ -2,6 +2,7 @@ import { useState, useEffect, useRef, useCallback } from "react";
 import { supabase } from "./supabase";
 import InstallBanner from "./InstallBanner";
 import AccountSettings from "./AccountSettings";
+import ArtistProfile from "./ArtistProfile";
 import { analyzeAudio } from "./lib/audioAnalysis";
 import { exportTracksToCsv } from "./lib/csvExport";
 import BulkEditModal from "./components/BulkEditModal";
@@ -1583,6 +1584,8 @@ export default function App({ session }) {
   const [showAddProj, setShowAddProj] = useState(false);
   const [showNewChooser, setShowNewChooser] = useState(false);
   const [showAccount, setShowAccount] = useState(false);
+  const [showArtistProfile, setShowArtistProfile] = useState(false);
+  const [profileReady, setProfileReady] = useState(null);
   const [showImport, setShowImport] = useState(false);
   const [showFillImport, setShowFillImport] = useState(false);
   const [showMenu, setShowMenu] = useState(false);
@@ -1607,7 +1610,16 @@ const dismissOnboarding = (goToProjects = false) => {
     supabase.from('projects').select('*, tracks(*)').order('created_at',{ascending:false})
       .then(({data}) => {if(data)setProjects(data.map(p=>({...p,tracks:p.tracks||[]})));setLoaded(true);});
   }, []);
-
+useEffect(() => {
+    supabase
+      .from('artist_profiles')
+      .select('onboarding_complete')
+      .eq('user_id', session.user.id)
+      .single()
+      .then(({ data }) => {
+        setProfileReady(data?.onboarding_complete === true);
+      });
+  }, [session.user.id]);
 
 
   const proj = projects.find(p=>p.id===projId);
@@ -1943,6 +1955,8 @@ const doShare = async (ids, playlistName) => {
     if(data)setProjects(data.map(p=>({...p,tracks:p.tracks||[]})));
   };
 if(showAccount) return <AccountSettings session={session} onBack={() => setShowAccount(false)} />;
+if(showArtistProfile) return <ArtistProfile session={session} onBack={() => setShowArtistProfile(false)} />;
+  if(profileReady === false) return <ArtistProfile session={session} isOnboarding={true} onComplete={() => setProfileReady(true)} />;
   if(printData)return <PrintPreview tracks={printData.tracks} projectName={printData.projectName} onBack={() => setPrintData(null)} />;
   if(!loaded)return <div className="flex items-center justify-center h-screen bg-gray-950 text-gray-400">Loading...</div>;
 
@@ -2080,6 +2094,10 @@ if(showAccount) return <AccountSettings session={session} onBack={() => setShowA
                   <button onClick={() => { setShowAccount(true); setShowMenu(false); }}
                     className="w-full text-left px-4 py-3 text-sm text-gray-300 hover:bg-gray-800 transition-colors border-b border-gray-800">
                     Account Settings
+                  </button>
+                  <button onClick={() => { setShowArtistProfile(true); setShowMenu(false); }}
+                    className="w-full text-left px-4 py-3 text-sm text-gray-300 hover:bg-gray-800 transition-colors border-b border-gray-800">
+                    Artist Profile (EPK)
                   </button>
                   <button onClick={() => { signOut(); setShowMenu(false); }}
                     className="w-full text-left px-4 py-3 text-sm text-gray-400 hover:bg-gray-800 transition-colors">

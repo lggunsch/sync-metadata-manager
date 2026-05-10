@@ -104,7 +104,6 @@ function ArtistBlock({ profile }) {
             <p className="text-xs text-gray-500 mt-0.5">{profile.location}</p>
           )}
         </div>
-        <span className="text-xs text-green-400 bg-green-900/30 px-2 py-0.5 rounded-full flex-shrink-0">pitch-ready</span>
       </div>
 
       {/* Bio */}

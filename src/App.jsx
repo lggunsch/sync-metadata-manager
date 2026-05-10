@@ -1564,7 +1564,7 @@ console.log('briefs result', data, 'now', now);
   );
 }
 export default function App({ session }) {
-  const [tab, _setTab] = useState(() => localStorage.getItem('fsm_tab') || 'home');
+  const [tab, _setTab] = useState('home');
   const [view, _setView] = useState(() => {
     const v = localStorage.getItem('fsm_view');
     return v === 'track' ? 'project' : (v || 'dashboard');
@@ -1572,7 +1572,7 @@ export default function App({ session }) {
   const [projects, setProjects] = useState([]);
   const [projId, _setProjId] = useState(() => localStorage.getItem('fsm_projId') || null);
   // Synchronous wrappers — guaranteed to save before iOS kills the page
-  const setTab = (v) => { localStorage.setItem('fsm_tab', v); _setTab(v); };
+  const setTab = (v) => { _setTab(v); };
   const setView = (v) => { localStorage.setItem('fsm_view', v); _setView(v); };
   const setProjId = (v) => { if (v) localStorage.setItem('fsm_projId', v); _setProjId(v); };
   const [trackData, setTrackData] = useState(null);
@@ -1584,7 +1584,7 @@ export default function App({ session }) {
   const [showAddProj, setShowAddProj] = useState(false);
   const [showNewChooser, setShowNewChooser] = useState(false);
   const [showAccount, setShowAccount] = useState(false);
-  const [showArtistProfile, setShowArtistProfile] = useState(false);
+  const [showArtistProfile, setShowArtistProfile] = useState(() => sessionStorage.getItem('fsm_show_artist_profile') === 'true');
   const [profileReady, setProfileReady] = useState(null);
   const [showImport, setShowImport] = useState(false);
   const [showFillImport, setShowFillImport] = useState(false);
@@ -1955,7 +1955,7 @@ const doShare = async (ids, playlistName) => {
     if(data)setProjects(data.map(p=>({...p,tracks:p.tracks||[]})));
   };
 if(showAccount) return <AccountSettings session={session} onBack={() => setShowAccount(false)} />;
-if(showArtistProfile) return <ArtistProfile session={session} onBack={() => setShowArtistProfile(false)} />;
+if(showArtistProfile) return <ArtistProfile session={session} onBack={() => { sessionStorage.removeItem('fsm_show_artist_profile'); setShowArtistProfile(false); }} />;
   if(profileReady === false) return <ArtistProfile session={session} isOnboarding={true} onComplete={() => setProfileReady(true)} />;
   if(printData)return <PrintPreview tracks={printData.tracks} projectName={printData.projectName} onBack={() => setPrintData(null)} />;
   if(!loaded)return <div className="flex items-center justify-center h-screen bg-gray-950 text-gray-400">Loading...</div>;
@@ -2095,7 +2095,7 @@ if(showArtistProfile) return <ArtistProfile session={session} onBack={() => setS
                     className="w-full text-left px-4 py-3 text-sm text-gray-300 hover:bg-gray-800 transition-colors border-b border-gray-800">
                     Account Settings
                   </button>
-                  <button onClick={() => { setShowArtistProfile(true); setShowMenu(false); }}
+                  <button onClick={() => { sessionStorage.setItem('fsm_show_artist_profile', 'true'); setShowArtistProfile(true); setShowMenu(false); }}
                     className="w-full text-left px-4 py-3 text-sm text-gray-300 hover:bg-gray-800 transition-colors border-b border-gray-800">
                     Artist Profile (EPK)
                   </button>

@@ -65,7 +65,7 @@ function MetaRow({ label, value }) {
 }
 
 function fmtStat(n) {
-  if (n == null) return 'N/A';
+  if (n == null) return '-';
   if (n >= 1000000) return (n / 1000000).toFixed(1).replace(/\.0$/, '') + 'M';
   if (n >= 1000) return (n / 1000).toFixed(1).replace(/\.0$/, '') + 'K';
   return String(n);
@@ -104,7 +104,6 @@ function ArtistBlock({ profile }) {
             <p className="text-xs text-gray-500 mt-0.5">{profile.location}</p>
           )}
         </div>
-        <span className="text-xs text-green-400 bg-green-900/30 px-2 py-0.5 rounded-full flex-shrink-0">pitch-ready</span>
       </div>
 
       {/* Bio */}

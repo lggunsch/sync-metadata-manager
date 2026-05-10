@@ -27,6 +27,7 @@ export default function BriefBoard({ session }) {
   const [showFlow, setShowFlow] = useState(false);
   const [pitches, setPitches] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [expanded, setExpanded] = useState(null);
 
   const initials = session?.user?.email?.slice(0, 2).toUpperCase() || 'ME';
   const today = new Date().toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' });
@@ -146,7 +147,11 @@ export default function BriefBoard({ session }) {
         ) : (
           <div className="flex flex-col gap-2">
             {pitches.map(p => (
-              <div key={p.id} className="bg-gray-900 border border-gray-800 rounded-xl p-4">
+              <div
+                key={p.id}
+                className="bg-gray-900 border border-gray-800 rounded-xl p-4 cursor-pointer"
+                onClick={() => setExpanded(expanded === p.id ? null : p.id)}
+              >
                 <div className="flex items-start justify-between gap-2 mb-1.5">
                   <div className="flex items-center gap-2 flex-wrap">
                     <span className="text-sm font-semibold text-gray-100">
@@ -159,7 +164,7 @@ export default function BriefBoard({ session }) {
                   <div className="flex items-center gap-2 flex-shrink-0">
                     <span className="text-xs text-gray-600">{fmt(p.created_at)}</span>
                     <button
-                      onClick={() => deletePitch(p.id)}
+                      onClick={e => { e.stopPropagation(); deletePitch(p.id); }}
                       className="text-gray-700 hover:text-red-400 transition-colors text-lg leading-none"
                       title="Delete pitch"
                     >×</button>
@@ -170,6 +175,38 @@ export default function BriefBoard({ session }) {
                 )}
                 {p.notes && (
                   <p className="text-xs text-gray-600 mt-1.5 leading-relaxed line-clamp-2">{p.notes}</p>
+                )}
+
+                {expanded === p.id && (
+                  <div className="mt-3 pt-3 border-t border-gray-800 flex flex-col gap-3">
+                    {p.track_title && (
+                      <div>
+                        <p className="text-xs text-gray-500 font-medium uppercase tracking-wider mb-1.5">Tracks Pitched</p>
+                        <div className="flex flex-col gap-1">
+                          {p.track_title.split(', ').map((t, i) => (
+                            <p key={i} className="text-xs text-gray-300">· {t}</p>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+                    {p.notes && (
+                      <div>
+                        <p className="text-xs text-gray-500 font-medium uppercase tracking-wider mb-1.5">Brief</p>
+                        <p className="text-xs text-gray-400 leading-relaxed">{p.notes}</p>
+                      </div>
+                    )}
+                    {p.playlist_token && (
+                      <a
+                        href={`/p/${p.playlist_token}`}
+                        target="_blank"
+                        rel="noreferrer"
+                        onClick={e => e.stopPropagation()}
+                        className="text-xs text-brand-yellow/75 hover:text-brand-yellow transition-colors"
+                      >
+                        View playlist link →
+                      </a>
+                    )}
+                  </div>
                 )}
               </div>
             ))}

@@ -1586,6 +1586,9 @@ export default function App({ session }) {
   const [showAccount, setShowAccount] = useState(false);
   const [showArtistProfile, setShowArtistProfile] = useState(() => sessionStorage.getItem('fsm_show_artist_profile') === 'true');
   const [profileReady, setProfileReady] = useState(null);
+  const [brandColor, setBrandColor] = useState('#0E7490');
+const [contrastColor, setContrastColor] = useState('#FFFFFF');
+  
   const [showImport, setShowImport] = useState(false);
   const [showFillImport, setShowFillImport] = useState(false);
   const [showMenu, setShowMenu] = useState(false);
@@ -1601,8 +1604,12 @@ const [showBulkEdit, setShowBulkEdit] = useState(false);
 const [showSpotify, setShowSpotify] = useState(false);const [sharePrompt, setSharePrompt] = useState(null);
 const [showOnboarding, setShowOnboarding] = useState(() => !localStorage.getItem('fsm_onboarded'));
 const [onboardStep, setOnboardStep] = useState(0);
-const dismissOnboarding = (goToProjects = false) => {
+const dismissOnboarding = async (goToProjects = false) => {
   localStorage.setItem('fsm_onboarded', '1');
+  await supabase
+    .from('artist_profiles')
+    .update({ onboarded_at: new Date().toISOString() })
+    .eq('user_id', session.user.id);
   setShowOnboarding(false);
   if (goToProjects) setTab('projects');
 };
@@ -1613,11 +1620,24 @@ const dismissOnboarding = (goToProjects = false) => {
 useEffect(() => {
     supabase
       .from('artist_profiles')
-      .select('onboarding_complete')
+      .select('onboarding_complete, brand_color, onboarded_at')
       .eq('user_id', session.user.id)
       .single()
       .then(({ data }) => {
         setProfileReady(data?.onboarding_complete === true);
+        if (data?.brand_color) {
+          const hex = data.brand_color;
+          setBrandColor(hex);
+          const r = parseInt(hex.slice(1,3),16);
+          const g = parseInt(hex.slice(3,5),16);
+          const b = parseInt(hex.slice(5,7),16);
+          const lum = (0.299*r + 0.587*g + 0.114*b) / 255;
+          setContrastColor(lum > 0.55 ? '#000000' : '#FFFFFF');
+        }
+        if (data?.onboarded_at) {
+          localStorage.setItem('fsm_onboarded', '1');
+          setShowOnboarding(false);
+        }
       });
   }, [session.user.id]);
 
@@ -1962,6 +1982,14 @@ if(showArtistProfile) return <ArtistProfile session={session} onBack={() => { se
 
   return (
     <div className="min-h-screen bg-gray-950 text-gray-100 w-full overflow-x-hidden">
+      <style>{`
+  .text-brand-yellow,
+  [class*="text-brand-yellow"] { color: ${brandColor} !important; }
+  [class~="bg-brand-yellow"]   { background-color: ${brandColor} !important; }
+  [class*="border-brand-yellow"] { border-color: ${brandColor} !important; }
+  [class*="ring-brand-yellow"]   { --tw-ring-color: ${brandColor} !important; }
+  [class~="bg-brand-yellow"][class*="text-brand-navy"] { color: ${contrastColor} !important; }
+`}</style>
       {showOnboarding && (
   <div className="fixed inset-0 bg-black/80 flex items-end sm:items-center justify-center z-50 p-4">
     <div className="bg-gray-900 border border-gray-800 rounded-2xl w-full max-w-sm flex flex-col overflow-hidden">
